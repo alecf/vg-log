@@ -5,13 +5,19 @@
 ```
 vg-log/
 ├── apps/
-│   ├── web/                    # React frontend
+│   ├── web/                    # React frontend (PWA)
 │   │   ├── src/
 │   │   │   ├── components/     # Reusable UI components
+│   │   │   │   ├── ui/         # shadcn components
+│   │   │   │   ├── timer/      # Timer-related components
+│   │   │   │   └── charts/     # Visualization components
 │   │   │   ├── routes/         # TanStack Router pages
 │   │   │   ├── lib/            # Utilities, tRPC client
 │   │   │   ├── hooks/          # Custom React hooks
+│   │   │   ├── stores/         # Zustand stores (timer state)
 │   │   │   └── styles/         # Global styles
+│   │   ├── public/
+│   │   │   └── sounds/         # Alert sounds
 │   │   ├── index.html
 │   │   ├── vite.config.ts
 │   │   └── package.json
@@ -20,8 +26,9 @@ vg-log/
 │       ├── src/
 │       │   ├── routers/        # tRPC routers
 │       │   ├── db/             # Drizzle schema & migrations
-│       │   ├── middleware/     # Auth, logging, etc.
+│       │   ├── lib/            # Utilities
 │       │   └── index.ts        # Worker entry point
+│       ├── drizzle/            # Migration files
 │       ├── wrangler.toml
 │       └── package.json
 │
@@ -34,387 +41,518 @@ vg-log/
 │
 ├── package.json                # Root package.json (workspaces)
 ├── pnpm-workspace.yaml
-├── tsconfig.json               # Base TypeScript config
-└── turbo.json                  # Turborepo config (optional)
+└── tsconfig.json               # Base TypeScript config
+```
+
+---
+
+## Database Schema
+
+```typescript
+// apps/api/src/db/schema.ts
+
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+
+// Family group
+export const families = sqliteTable('families', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  inviteCode: text('invite_code').notNull().unique(),
+  timezone: text('timezone').notNull().default('America/Los_Angeles'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Users (parents and kids)
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  familyId: text('family_id').notNull().references(() => families.id),
+  name: text('name').notNull(),
+  role: text('role', { enum: ['parent', 'child'] }).notNull(),
+  pin: text('pin'), // 4-digit PIN for kids
+  email: text('email'), // Optional, mainly for parents
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Gaming sessions
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  familyId: text('family_id').notNull().references(() => families.id),
+  startTime: integer('start_time', { mode: 'timestamp' }).notNull(),
+  endTime: integer('end_time', { mode: 'timestamp' }), // null = active
+  notes: text('notes'),
+  isManual: integer('is_manual', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Time limits set by parents
+export const limits = sqliteTable('limits', {
+  id: text('id').primaryKey(),
+  familyId: text('family_id').notNull().references(() => families.id),
+  userId: text('user_id').notNull().references(() => users.id), // which child
+  limitType: text('limit_type', {
+    enum: ['daily', 'weekend_daily', 'weekly', 'monthly']
+  }).notNull(),
+  minutes: integer('minutes').notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  effectiveFrom: integer('effective_from', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Alert settings
+export const alertSettings = sqliteTable('alert_settings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  warningMinutes: integer('warning_minutes').notNull().default(15),
+  urgentMinutes: integer('urgent_minutes').notNull().default(5),
+  soundEnabled: integer('sound_enabled', { mode: 'boolean' }).notNull().default(true),
+});
 ```
 
 ---
 
 ## Implementation Phases
 
-### Phase 1: Project Setup & Infrastructure
+### Phase 1: Project Scaffolding
 
-**Goal:** Set up the monorepo, development environment, and basic infrastructure.
+**Goal:** Set up monorepo, dev environment, and basic infrastructure.
 
 #### Tasks:
 
-1. **Initialize monorepo with pnpm workspaces**
-   - Create root `package.json` with workspaces config
-   - Set up `pnpm-workspace.yaml`
-   - Configure shared TypeScript settings
+1. **Initialize monorepo**
+   - Create `pnpm-workspace.yaml`
+   - Configure root `package.json` with scripts
+   - Set up shared TypeScript config
 
-2. **Set up frontend app (`apps/web`)**
-   - Initialize Vite + React + TypeScript
-   - Install and configure TanStack Router
-   - Install and configure TanStack Query
-   - Set up shadcn/ui with Tailwind CSS
-   - Configure path aliases
+2. **Set up frontend (`apps/web`)**
+   - Vite + React + TypeScript
+   - TanStack Router (file-based routing)
+   - TanStack Query
+   - shadcn/ui + Tailwind CSS
+   - Configure PWA manifest
 
-3. **Set up backend API (`apps/api`)**
-   - Initialize Cloudflare Worker project with Wrangler
-   - Install Hono framework
-   - Install and configure tRPC
-   - Install and configure Drizzle ORM
-   - Set up D1 database binding
+3. **Set up backend (`apps/api`)**
+   - Cloudflare Worker with Hono
+   - tRPC integration
+   - D1 database binding
+   - Drizzle ORM setup
 
-4. **Set up shared package (`packages/shared`)**
-   - Create Zod schemas for shared validation
-   - Define shared TypeScript types
-   - Configure build and exports
+4. **Set up shared package**
+   - Zod schemas for validation
+   - Shared TypeScript types
 
-5. **Configure development workflow**
-   - Set up concurrent dev servers
-   - Configure environment variables
-   - Set up ESLint and Prettier
-   - Configure VS Code settings
+5. **Verify connectivity**
+   - tRPC client calling API
+   - Basic health check endpoint
 
 #### Deliverables:
-- [ ] Working monorepo with all packages
-- [ ] Frontend dev server running
-- [ ] Worker dev server running with D1
-- [ ] Basic "Hello World" tRPC endpoint connected
+- [ ] `pnpm dev` runs both apps
+- [ ] Frontend can call backend via tRPC
+- [ ] D1 database connected
 
 ---
 
-### Phase 2: Database Schema & API Foundation
+### Phase 2: Database & Core API
 
-**Goal:** Design and implement the database schema and core API endpoints.
+**Goal:** Implement database schema and essential API endpoints.
 
 #### Tasks:
 
-1. **Design Drizzle schema**
+1. **Create Drizzle schema**
+   - families, users, sessions, limits tables
+   - Run initial migration
+
+2. **Implement tRPC routers**
+
    ```typescript
-   // users table
-   // games table
-   // sessions table
+   // familyRouter
+   family.create      // Create family (returns invite code)
+   family.join        // Join family with invite code
+   family.get         // Get family details
+   family.members     // List family members
+
+   // authRouter
+   auth.login         // Login with PIN or email
+   auth.logout        // Clear session
+   auth.me            // Get current user
+
+   // sessionRouter
+   session.start      // Start new session
+   session.stop       // End active session
+   session.active     // Get current active session
+   session.list       // List sessions (with filters)
+   session.manual     // Add manual session
+
+   // limitRouter
+   limit.set          // Set/update limit for a child
+   limit.get          // Get limits for a child
+   limit.remaining    // Calculate remaining time
+
+   // statsRouter
+   stats.weekly       // Weekly summary data
+   stats.calendar     // Calendar view data
+   stats.trends       // Trend data for graphs
    ```
 
-2. **Create D1 migrations**
-   - Initial schema migration
-   - Set up migration workflow
-
-3. **Implement tRPC routers**
-   - `gameRouter`: CRUD operations for games
-   - `sessionRouter`: CRUD operations for sessions
-   - `statsRouter`: Aggregation queries
-
-4. **Set up tRPC client on frontend**
-   - Configure tRPC + TanStack Query integration
-   - Set up type inference from backend
-
-5. **Implement basic auth (simplified for v1)**
-   - For MVP: Simple user ID in localStorage
-   - Future: Full auth with sessions/JWT
-
-#### API Endpoints:
-
-```typescript
-// Games
-games.list        // Get all games for user
-games.get         // Get single game by ID
-games.create      // Create new game
-games.update      // Update game
-games.delete      // Delete game
-
-// Sessions
-sessions.list     // Get sessions (with pagination, filters)
-sessions.get      // Get single session
-sessions.create   // Create/start session
-sessions.update   // Update session (end time, notes)
-sessions.delete   // Delete session
-sessions.active   // Get currently active session
-
-// Stats
-stats.overview    // Dashboard stats
-stats.byGame      // Time per game
-stats.byPlatform  // Time per platform
-stats.timeline    // Daily/weekly/monthly trends
-```
+3. **Implement remaining time calculation**
+   - Sum sessions in current period
+   - Subtract from limit
+   - Handle timezone correctly
 
 #### Deliverables:
-- [ ] Database schema implemented and migrated
-- [ ] All CRUD endpoints working
-- [ ] Stats endpoints returning real data
-- [ ] Frontend can fetch data via tRPC
+- [ ] All tables created in D1
+- [ ] CRUD operations working
+- [ ] Remaining time calculation accurate
 
 ---
 
-### Phase 3: Core UI Components
+### Phase 3: Authentication & Family Setup
 
-**Goal:** Build the foundational UI components using shadcn/ui.
+**Goal:** Implement simple auth and family management.
 
 #### Tasks:
 
-1. **Set up shadcn/ui components**
-   - Button, Input, Card, Dialog, etc.
-   - Data Table with sorting/filtering
-   - Form components with react-hook-form
+1. **Family creation flow**
+   - Parent enters name, creates family
+   - Generate unique 6-char invite code
+   - Store parent as first member
 
-2. **Build custom components**
-   - `GameCard` - Display game with cover art
-   - `SessionTimer` - Live timer display
-   - `StatCard` - Dashboard stat display
-   - `TimeDisplay` - Format duration nicely
-   - `PlatformBadge` - Platform indicator
-   - `StatusBadge` - Game status indicator
+2. **Family join flow**
+   - Enter invite code
+   - Enter name and role (kid)
+   - Set 4-digit PIN
 
-3. **Create layout components**
-   - `AppShell` - Main layout with nav
-   - `PageHeader` - Consistent page headers
-   - `EmptyState` - When no data exists
+3. **Login flow**
+   - Kids: Select name + enter PIN
+   - Parents: Email or PIN option
+   - Store session in cookie/localStorage
 
-4. **Implement dark mode**
-   - Configure Tailwind dark mode
-   - Theme toggle component
-   - Persist preference
+4. **Session management**
+   - Persist login across refreshes
+   - Auto-login on same device
+   - Logout functionality
+
+#### UI Pages:
+- `/onboarding` - First-time setup wizard
+- `/login` - Family member selection + PIN
+- `/family` - Manage members (parent only)
 
 #### Deliverables:
-- [ ] All shadcn components installed
-- [ ] Custom components built and documented
-- [ ] Consistent design system
-- [ ] Dark/light mode working
+- [ ] Can create family and get invite code
+- [ ] Can join family with code
+- [ ] Login/logout working
+- [ ] Session persists
 
 ---
 
-### Phase 4: Feature - Game Library
+### Phase 4: Timer & Session Tracking (Core Feature)
 
-**Goal:** Implement full game library management.
+**Goal:** Implement the main kid experience - starting/stopping sessions.
 
 #### Tasks:
 
-1. **Games list page (`/games`)**
-   - Grid view of games with covers
-   - Search by title
-   - Filter by platform and status
-   - Empty state for new users
+1. **Timer state management (Zustand)**
+   ```typescript
+   interface TimerStore {
+     activeSession: Session | null;
+     elapsedSeconds: number;
+     remainingSeconds: number;
+     alertState: 'ok' | 'warning' | 'urgent' | 'exceeded';
+     startSession: () => Promise<void>;
+     stopSession: () => Promise<void>;
+     tick: () => void;
+   }
+   ```
 
-2. **Add game dialog/form**
-   - Form with validation
-   - Platform selector
-   - Status selector
-   - Optional fields (cover URL, genre, notes)
+2. **Timer component**
+   - Large, readable display
+   - Color changes based on remaining time
+   - Elapsed time + remaining time
 
-3. **Game detail page (`/games/:id`)**
-   - Display game info
-   - Edit game button
-   - Delete game (with confirmation)
-   - Total time played for this game
-   - List of sessions for this game
+3. **Start/Stop session flow**
+   - "Start Playing" → Creates session, starts timer
+   - "Stop Playing" → Ends session, shows summary
+   - Persist to server immediately
 
-4. **Edit game dialog/form**
-   - Pre-populated form
-   - Save/cancel actions
+4. **Alert system**
+   - Visual color changes (green→yellow→orange→red)
+   - Optional sound alerts
+   - Browser notification at thresholds
+   - Cannot be dismissed easily
+
+5. **Recovery handling**
+   - Check for active session on app load
+   - Resume timer if session exists
+   - Handle abandoned sessions
+
+#### UI Pages:
+- `/play` - Main timer screen for kids
 
 #### Deliverables:
-- [ ] Can add games to library
-- [ ] Can view all games
-- [ ] Can edit game details
-- [ ] Can delete games
-- [ ] Search and filter working
+- [ ] Timer starts/stops correctly
+- [ ] Time syncs with server
+- [ ] Alerts trigger at thresholds
+- [ ] Session survives page refresh
 
 ---
 
-### Phase 5: Feature - Session Tracking
+### Phase 5: Dashboard & Remaining Time
 
-**Goal:** Implement session logging with live timer.
+**Goal:** Build role-aware dashboard showing key information.
 
 #### Tasks:
 
-1. **Active session state management**
-   - Store active session in React state
-   - Persist active session to localStorage (recovery)
-   - Sync with server
+1. **Kid dashboard**
+   - Remaining time (prominent display)
+   - Progress bar (used vs limit)
+   - Quick "Start Playing" button
+   - Recent sessions list
+   - Current streak/status
 
-2. **Start session flow**
-   - "Start Session" button on game card/detail
-   - Creates session with current timestamp
-   - Shows active timer in header/dashboard
+2. **Parent dashboard**
+   - Overview of each child
+   - Time used this week per child
+   - Quick limit adjustment
+   - Flag any manual entries
 
-3. **Live timer component**
-   - Real-time updating display
-   - Visible globally when session active
-   - Quick stop button
+3. **Remaining time widget**
+   - Reusable component
+   - Updates in real-time when session active
+   - Shows daily AND weekly remaining
 
-4. **Stop session flow**
-   - End session, set endTime
-   - Prompt for optional notes
-   - Show session summary
+4. **Recent sessions list**
+   - Last 5-10 sessions
+   - Duration, date, time
+   - Manual entry indicator
 
-5. **Manual session entry**
-   - Form to add past sessions
-   - Date/time pickers for start/end
-   - Game selector
-
-6. **Sessions list page (`/sessions`)**
-   - Paginated list of sessions
-   - Filter by game, date range
-   - Edit/delete actions
+#### UI Pages:
+- `/` - Dashboard (role-aware)
 
 #### Deliverables:
-- [ ] Can start/stop live sessions
-- [ ] Timer displays correctly
-- [ ] Can add manual sessions
-- [ ] Can view/edit/delete sessions
+- [ ] Kid sees remaining time immediately
+- [ ] Parent sees all children's status
+- [ ] Data updates in real-time
 
 ---
 
-### Phase 6: Feature - Dashboard & Statistics
+### Phase 6: Limits Configuration
 
-**Goal:** Build the dashboard and statistics views.
+**Goal:** Parents can set and adjust time limits.
 
 #### Tasks:
 
-1. **Dashboard page (`/`)**
-   - Welcome message
-   - Quick stat cards:
-     - Total time (all time)
-     - This week's time
-     - Games in library
-     - Current streak
-   - Active session indicator
-   - Recent sessions list (5-10)
-   - Quick actions
+1. **Limits management UI**
+   - Select child
+   - Set weekly limit (MVP)
+   - Save and apply immediately
 
-2. **Statistics page (`/stats`)**
-   - Install Recharts
-   - Time by game (bar chart)
-   - Time by platform (pie chart)
-   - Daily/weekly trend (line chart)
-   - Date range selector
+2. **Limit display for kids**
+   - Show current limits on dashboard
+   - "Your limit: 7 hours/week"
 
-3. **Game detail stats**
-   - Time played for specific game
-   - Session history chart
+3. **Limit history** (optional)
+   - Track when limits changed
+   - Show effective date
+
+#### UI Pages:
+- `/limits` - Limit configuration (parent only)
 
 #### Deliverables:
-- [ ] Dashboard with real stats
-- [ ] Interactive charts
-- [ ] Date range filtering
+- [ ] Parents can set weekly limits
+- [ ] Limits apply immediately
+- [ ] Kids can see their limits
 
 ---
 
-### Phase 7: Polish & Production Readiness
+### Phase 7: Calendar View
 
-**Goal:** Prepare for production deployment.
+**Goal:** Visual calendar showing gaming patterns.
+
+#### Tasks:
+
+1. **Monthly calendar component**
+   - Show current month
+   - Navigate between months
+   - Heat map coloring by usage
+
+2. **Day detail**
+   - Tap day to see sessions
+   - Show total time that day
+   - List individual sessions
+
+3. **Color coding**
+   - No gaming: gray/empty
+   - Light: pale green
+   - Medium: yellow
+   - Heavy/over limit: red
+
+#### UI Pages:
+- `/calendar` - Calendar view
+
+#### Deliverables:
+- [ ] Calendar displays correctly
+- [ ] Days are color-coded
+- [ ] Can drill into day details
+
+---
+
+### Phase 8: Weekly Summary
+
+**Goal:** Shareable weekly report for family discussions.
+
+#### Tasks:
+
+1. **Weekly summary page**
+   - Total time this week
+   - Limit and actual comparison
+   - Day-by-day breakdown (mini bar chart)
+   - Comparison to last week
+   - Sessions list
+
+2. **Summary generation**
+   - Auto-calculate at week end (Sunday/Monday configurable)
+   - Show trend (up/down/same)
+
+3. **Share functionality** (optional)
+   - Print-friendly view
+   - Copy summary text
+
+#### UI Pages:
+- `/summary` - Weekly summary
+
+#### Deliverables:
+- [ ] Weekly summary shows accurate data
+- [ ] Week-over-week comparison
+- [ ] Printable/shareable
+
+---
+
+### Phase 9: Polish & Production
+
+**Goal:** Production-ready application.
 
 #### Tasks:
 
 1. **Error handling**
    - Global error boundary
-   - API error handling
-   - User-friendly error messages
-   - Retry logic for failed requests
+   - Friendly error messages
+   - Retry logic for API calls
 
 2. **Loading states**
    - Skeleton loaders
-   - Optimistic updates
-   - Suspense boundaries
+   - Optimistic updates for timer
 
-3. **Performance optimization**
-   - Code splitting by route
-   - Image optimization
-   - Query caching strategy
-   - Bundle analysis
+3. **PWA setup**
+   - Service worker
+   - Add to home screen
+   - Offline indicator
 
-4. **Testing**
-   - Unit tests for utilities
-   - Integration tests for API
-   - E2E tests for critical flows
+4. **Sound alerts**
+   - Warning sound files
+   - Audio playback on threshold
+   - Respect sound settings
 
-5. **Production configuration**
-   - Environment variables
+5. **Performance**
+   - Code splitting
+   - Bundle optimization
+   - Lazy loading routes
+
+6. **Deployment**
    - Production D1 database
-   - Custom domain setup
-   - Analytics (optional)
-
-6. **Documentation**
-   - README with setup instructions
-   - API documentation
-   - Contributing guide
+   - Cloudflare Pages deployment
+   - Custom domain
 
 #### Deliverables:
 - [ ] No console errors
-- [ ] Fast load times
-- [ ] Test coverage
-- [ ] Production deployment working
+- [ ] Works as PWA
+- [ ] Deployed to production
+- [ ] Custom domain configured
 
 ---
 
-## Database Schema (Drizzle)
+## Key Components
 
-```typescript
-// packages/shared/src/db/schema.ts
+### Timer Display
+```tsx
+<TimerDisplay
+  elapsed={3600}          // seconds played
+  remaining={5400}        // seconds remaining
+  alertState="warning"    // ok | warning | urgent | exceeded
+  onStop={() => {}}
+/>
+```
 
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+### Time Remaining Widget
+```tsx
+<TimeRemaining
+  remaining={5400}        // seconds
+  limit={25200}           // weekly limit in seconds
+  period="week"
+/>
+// Displays: "2h 30m left this week"
+```
 
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  name: text('name'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+### Progress Bar
+```tsx
+<TimeProgressBar
+  used={18000}            // 5 hours
+  limit={25200}           // 7 hours
+  showLabels
+/>
+// Visual bar: [=========>          ] 71%
+```
 
-export const games = sqliteTable('games', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id),
-  title: text('title').notNull(),
-  platform: text('platform', {
-    enum: ['pc', 'playstation', 'xbox', 'nintendo', 'mobile', 'other']
-  }).notNull(),
-  status: text('status', {
-    enum: ['playing', 'completed', 'backlog', 'dropped', 'wishlist']
-  }).notNull().default('backlog'),
-  coverUrl: text('cover_url'),
-  genre: text('genre'),
-  notes: text('notes'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
-
-export const sessions = sqliteTable('sessions', {
-  id: text('id').primaryKey(),
-  gameId: text('game_id').notNull().references(() => games.id),
-  userId: text('user_id').notNull().references(() => users.id),
-  startTime: integer('start_time', { mode: 'timestamp' }).notNull(),
-  endTime: integer('end_time', { mode: 'timestamp' }),
-  notes: text('notes'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+### Alert Banner
+```tsx
+<AlertBanner
+  state="urgent"
+  remaining={300}         // 5 minutes
+  onDismiss={() => {}}    // requires acknowledgment
+/>
 ```
 
 ---
 
-## Key Technical Decisions
+## API Response Types
 
-### 1. Monorepo Structure
-Using pnpm workspaces for simplicity. Can upgrade to Turborepo if needed for caching.
+```typescript
+// Remaining time response
+interface RemainingTime {
+  daily: {
+    used: number;         // minutes
+    limit: number | null;
+    remaining: number;
+  };
+  weekly: {
+    used: number;
+    limit: number;
+    remaining: number;
+  };
+  activeSession: {
+    id: string;
+    startTime: Date;
+    elapsedMinutes: number;
+  } | null;
+}
 
-### 2. tRPC + Hono on Workers
-Hono provides excellent Cloudflare Workers support. tRPC adapter for Hono enables type-safe APIs.
-
-### 3. D1 + Drizzle
-Drizzle has first-class D1 support and generates clean migrations. SQLite syntax is straightforward.
-
-### 4. TanStack Router
-File-based routing with full type safety. Better DX than React Router for type inference.
-
-### 5. shadcn/ui
-Copy-paste components mean full control. Built on Radix primitives for accessibility.
-
-### 6. Authentication Strategy
-For MVP, use a simple UUID stored in localStorage. This allows immediate use without auth complexity. Can add proper auth (Cloudflare Access, Auth0, or custom) in v2.
+// Weekly summary response
+interface WeeklySummary {
+  weekStart: Date;
+  weekEnd: Date;
+  totalMinutes: number;
+  limitMinutes: number;
+  sessions: Session[];
+  dailyBreakdown: {
+    date: Date;
+    minutes: number;
+  }[];
+  comparison: {
+    lastWeek: number;
+    change: number;        // percentage
+    trend: 'up' | 'down' | 'same';
+  };
+}
+```
 
 ---
 
@@ -424,67 +562,67 @@ For MVP, use a simple UUID stored in localStorage. This allows immediate use wit
 # Install dependencies
 pnpm install
 
-# Start all dev servers
+# Start dev servers (both apps)
 pnpm dev
 
 # Start individual apps
 pnpm --filter web dev
 pnpm --filter api dev
 
-# Database migrations
-pnpm --filter api db:generate  # Generate migration
-pnpm --filter api db:migrate   # Run migration
+# Database
+pnpm --filter api db:generate   # Generate migration
+pnpm --filter api db:migrate    # Run local migration
+pnpm --filter api db:studio     # Open Drizzle Studio
 
-# Build for production
+# Build
 pnpm build
 
 # Deploy
-pnpm --filter api deploy       # Deploy worker
-pnpm --filter web deploy       # Deploy to Pages
+pnpm --filter api deploy        # Deploy worker
+pnpm --filter web deploy        # Deploy to Pages
 
-# Type checking
+# Type check
 pnpm typecheck
 
-# Linting
+# Lint
 pnpm lint
 ```
 
 ---
 
-## Milestones & Checkpoints
+## Timeline-Free Milestones
 
-| Milestone | Description | Validation |
-|-----------|-------------|------------|
-| M1 | Project setup complete | Both apps running, tRPC connected |
-| M2 | Database ready | Can CRUD games and sessions via API |
-| M3 | Game library working | Can manage games in UI |
-| M4 | Session tracking working | Can start/stop sessions with timer |
-| M5 | Dashboard complete | Stats display correctly |
-| M6 | Production ready | Deployed and accessible |
+| Milestone | Validation Criteria |
+|-----------|---------------------|
+| **M1: Setup** | Both apps running, tRPC connected, D1 working |
+| **M2: Auth** | Can create family, join with code, login/logout |
+| **M3: Timer** | Can start/stop sessions, timer works, alerts fire |
+| **M4: Dashboard** | See remaining time, recent sessions, basic stats |
+| **M5: Limits** | Parents can set limits, kids see remaining |
+| **M6: Calendar** | Calendar shows sessions with color coding |
+| **M7: Summary** | Weekly summary generates correctly |
+| **M8: Production** | Deployed, working on custom domain |
 
 ---
 
-## Risk Mitigation
+## Technical Decisions
 
-| Risk | Mitigation |
-|------|------------|
-| D1 limitations (SQLite) | Design schema with D1 limits in mind; avoid complex joins |
-| Worker cold starts | Minimize bundle size; use lightweight dependencies |
-| tRPC + Workers complexity | Use hono-trpc adapter; follow official examples |
-| Auth complexity | Defer to v2; use simple UUID for MVP |
-| Time zone issues | Store all times as UTC; convert on client |
+| Decision | Rationale |
+|----------|-----------|
+| **Weekly limits first** | Simplest mental model; daily limits add complexity |
+| **PIN auth for kids** | No email needed, easy to remember, quick login |
+| **Zustand for timer** | Local state that needs to persist and update frequently |
+| **Server-side session storage** | Timer state survives device switches |
+| **Browser notifications** | Works without native app; PWA-friendly |
+| **SQLite timestamps as integers** | D1/SQLite best practice for dates |
 
 ---
 
 ## Getting Started
 
-Begin with Phase 1 tasks. The recommended order:
+1. Clone repo and install: `pnpm install`
+2. Set up local D1: `pnpm --filter api db:migrate`
+3. Start dev servers: `pnpm dev`
+4. Open http://localhost:5173
 
-1. Initialize the monorepo structure
-2. Set up the web app with Vite + React
-3. Set up the API worker with Hono
-4. Connect them with tRPC
-5. Add D1 database
-6. Proceed to Phase 2
-
-Each phase builds on the previous. Complete all deliverables before moving to the next phase.
+Begin with Phase 1, validating each deliverable before proceeding.
