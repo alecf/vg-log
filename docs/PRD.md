@@ -28,6 +28,19 @@ VG-Log creates a **shared source of truth** where:
 - **Shared visibility**: Same data for everyone, no secrets
 - **Kid-friendly**: Simple to use, not punitive
 - **Limit awareness**: Know your budget before you play
+- **Informational, not restrictive**: The app warns but never blocks
+
+### Key Design Decisions
+
+1. **No enforcement**: The app cannot actually prevent gaming, so it won't try. Kids can always log time, even past their limit. The value is in awareness and shared data, not control.
+
+2. **Parent notifications**: Parents are notified when a child exceeds their limit (via browser notification if app is open, or other available web mechanisms).
+
+3. **Over-limit behavior**: When a kid is over their limit:
+   - Timer turns red and shows negative remaining time
+   - Parent is notified
+   - Kid can still start/stop sessions normally
+   - Data is still tracked accurately
 
 ---
 
@@ -104,9 +117,25 @@ Kid opens app → Sees "You have 2h 30m left this week"
 🟡 Getting close (15-30 min remaining)
 🟠 Warning (5-15 min remaining)
 🔴 Time's up (0 min remaining)
+⚫ Over limit (negative time) - still trackable, parent notified
 ```
 
-### 4. Dashboard (Shared View)
+### 4. Parent Notifications
+
+**Description:** Parents are alerted when kids exceed limits.
+
+**Requirements:**
+- Notify when a child goes over their weekly limit
+- Browser notification (if parent has app open)
+- Visual indicator on parent dashboard ("Over limit!")
+- Optional: Email notification (v2)
+
+**Limitations (Web App):**
+- Browser notifications require the app to be open or a service worker
+- No native push notifications without PWA install
+- Email would require additional infrastructure
+
+### 5. Dashboard (Shared View)
 
 **Description:** At-a-glance view of current status and recent activity.
 
@@ -122,7 +151,7 @@ Kid opens app → Sees "You have 2h 30m left this week"
 - Any manual entries to review
 - Quick limit adjustment
 
-### 5. Weekly Summary
+### 6. Weekly Summary
 
 **Description:** End-of-week report for family discussion.
 
@@ -134,7 +163,7 @@ Kid opens app → Sees "You have 2h 30m left this week"
 - Trend indicator (up/down/same)
 - Shareable/printable
 
-### 6. Calendar View
+### 7. Calendar View
 
 **Description:** Visual calendar showing gaming sessions.
 
@@ -145,7 +174,7 @@ Kid opens app → Sees "You have 2h 30m left this week"
 - Shows streaks and patterns
 - Both parent and kid can view
 
-### 7. Graphs & Statistics
+### 8. Graphs & Statistics
 
 **Description:** Visual representation of gaming habits over time.
 
@@ -155,7 +184,7 @@ Kid opens app → Sees "You have 2h 30m left this week"
 - Time of day pattern (when do they play)
 - Trend line over time
 
-### 8. Family Setup
+### 9. Family Setup
 
 **Description:** Connect parents and kids in a family group.
 
@@ -348,10 +377,17 @@ User:
 
 ---
 
+## Resolved Decisions
+
+| Question | Decision |
+|----------|----------|
+| Enforcement vs informational? | **Informational only** - app warns but never blocks |
+| Parent notifications? | **Yes** - via browser notifications when limit exceeded |
+| Streaks for staying under limit? | **Deferred to v2** |
+| Bank/rollover unused time? | **Deferred to v2** |
+
 ## Open Questions
 
-1. Should there be any "enforcement" or is it purely informational?
-2. Do parents get notified when kid exceeds limit?
-3. Should the app work on game consoles or just phones/tablets/computers?
-4. Is there value in "streaks" (days of staying under limit)?
-5. Should kids be able to "bank" unused time for later?
+1. Should the app work on game consoles or just phones/tablets/computers?
+2. What's the best fallback when browser notifications aren't available?
+3. Should there be a "grace period" after hitting the limit before notifying parents?
