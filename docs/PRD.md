@@ -38,7 +38,8 @@ VG-Log creates a **shared source of truth** where:
 
 3. **Over-limit behavior**: When a kid is over their limit:
    - Timer turns red and shows negative remaining time
-   - Parent is notified
+   - Parent is notified immediately (no grace period)
+   - Kid sees that parent has been notified (transparency)
    - Kid can still start/stop sessions normally
    - Data is still tracked accurately
 
@@ -395,10 +396,11 @@ User:
 | Parent notifications? | **Yes** - configurable preferences per parent |
 | Platform support? | **Self-reporting only** - not tied to any gaming platform |
 | Notification fallback? | **None for v1** - rely on available web mechanisms |
+| Grace period before notifying? | **No** - notify immediately when limit exceeded |
+| Kids see notification status? | **Yes** - kids see when parents have been notified |
 | Streaks for staying under limit? | **Deferred to v2** |
 | Bank/rollover unused time? | **Deferred to v2** |
 
 ## Open Questions
 
-1. Should there be a "grace period" after hitting the limit before notifying parents?
-2. Should kids see when parents have been notified?
+None currently - ready for implementation.
