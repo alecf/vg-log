@@ -126,9 +126,19 @@ Kid opens app → Sees "You have 2h 30m left this week"
 
 **Requirements:**
 - Notify when a child goes over their weekly limit
-- Browser notification (if parent has app open)
 - Visual indicator on parent dashboard ("Over limit!")
-- Optional: Email notification (v2)
+- Parent configures their notification preferences:
+  - Browser notification (requires app open or PWA)
+  - In-app alert banner
+  - Email notification (v2)
+- Parents can enable multiple notification types
+- Each notification type can be toggled independently
+
+**Notification Triggers:**
+- Child exceeds weekly limit
+- Child starts session when already over limit
+- (v2) Daily limit exceeded
+- (v2) Large single session (e.g., > 3 hours)
 
 **Limitations (Web App):**
 - Browser notifications require the app to be open or a service worker
@@ -382,12 +392,13 @@ User:
 | Question | Decision |
 |----------|----------|
 | Enforcement vs informational? | **Informational only** - app warns but never blocks |
-| Parent notifications? | **Yes** - via browser notifications when limit exceeded |
+| Parent notifications? | **Yes** - configurable preferences per parent |
+| Platform support? | **Self-reporting only** - not tied to any gaming platform |
+| Notification fallback? | **None for v1** - rely on available web mechanisms |
 | Streaks for staying under limit? | **Deferred to v2** |
 | Bank/rollover unused time? | **Deferred to v2** |
 
 ## Open Questions
 
-1. Should the app work on game consoles or just phones/tablets/computers?
-2. What's the best fallback when browser notifications aren't available?
-3. Should there be a "grace period" after hitting the limit before notifying parents?
+1. Should there be a "grace period" after hitting the limit before notifying parents?
+2. Should kids see when parents have been notified?
