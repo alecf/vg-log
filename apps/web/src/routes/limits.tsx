@@ -24,12 +24,40 @@ function Limits() {
 
 function LimitsContent() {
   const utils = trpc.useUtils();
-  const { data: members } = trpc.family.members.useQuery();
+  const { data: members, isLoading: membersLoading, error: membersError } = trpc.family.members.useQuery();
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [hours, setHours] = useState(7);
   const [minutes, setMinutes] = useState(0);
 
   const children = members?.filter((m) => m.role === "child") ?? [];
+
+  if (membersLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Time Limits</h1>
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 rounded-xl bg-card" />
+            ))}
+          </div>
+          <div className="h-48 rounded-xl bg-card" />
+        </div>
+      </div>
+    );
+  }
+
+  if (membersError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Time Limits</h1>
+        <div className="rounded-xl bg-exceeded/10 border border-exceeded/20 p-6 text-center">
+          <p className="text-exceeded font-medium">Failed to load family members</p>
+          <p className="text-sm text-muted-foreground mt-1">{membersError.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   const { data: childLimits } = trpc.limit.get.useQuery(
     { userId: selectedChildId ?? undefined },
@@ -220,6 +248,10 @@ function LimitsContent() {
 
                 {setLimit.isSuccess && (
                   <p className="text-sm text-ok text-center">Limit updated!</p>
+                )}
+
+                {setLimit.error && (
+                  <p className="text-sm text-exceeded text-center">{setLimit.error.message}</p>
                 )}
               </div>
 
