@@ -1,0 +1,33 @@
+{
+  "name": "@vg-log/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./trpc": "./src/routers/index.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply vg-log-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply vg-log-db --remote",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@hono/trpc-server": "^0.3.2",
+    "@trpc/server": "^11.0.0",
+    "drizzle-orm": "^0.38.4",
+    "hono": "^4.6.20",
+    "superjson": "^2.2.2",
+    "zod": "^3.24.1",
+    "@vg-log/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250124.2",
+    "drizzle-kit": "^0.30.4",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.105.1"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "@vg-log/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.66.0",
+    "@tanstack/react-router": "^1.97.0",
+    "@trpc/client": "^11.0.0",
+    "@trpc/react-query": "^11.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.474.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "superjson": "^2.2.2",
+    "tailwind-merge": "^2.6.0",
+    "zustand": "^5.0.3",
+    "@vg-log/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@vg-log/api": "workspace:*",
+    "@tailwindcss/vite": "^4.0.0",
+    "@tanstack/router-devtools": "^1.97.0",
+    "@tanstack/router-plugin": "^1.97.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  }
+}

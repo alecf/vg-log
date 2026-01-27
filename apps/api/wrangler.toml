@@ -1,0 +1,13 @@
+name = "vg-log-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vg-log-db"
+database_id = "local"
+migrations_dir = "drizzle"
