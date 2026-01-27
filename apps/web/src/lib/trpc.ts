@@ -9,10 +9,10 @@ export const trpc = createTRPCReact<AppRouter>();
 
 export function createTRPCClient(getAuth: () => { userId: string; familyId: string } | null) {
   return trpc.createClient({
-    transformer: superjson,
     links: [
       httpBatchLink({
         url: "/trpc",
+        transformer: superjson,
         headers() {
           const auth = getAuth();
           if (auth) {
