@@ -40,7 +40,6 @@ vg-log/
 │       └── package.json
 │
 ├── package.json                # Root package.json (workspaces)
-├── pnpm-workspace.yaml
 └── tsconfig.json               # Base TypeScript config
 ```
 
@@ -120,8 +119,7 @@ export const alertSettings = sqliteTable('alert_settings', {
 #### Tasks:
 
 1. **Initialize monorepo**
-   - Create `pnpm-workspace.yaml`
-   - Configure root `package.json` with scripts
+   - Configure root `package.json` with workspaces and scripts
    - Set up shared TypeScript config
 
 2. **Set up frontend (`apps/web`)**
@@ -146,7 +144,7 @@ export const alertSettings = sqliteTable('alert_settings', {
    - Basic health check endpoint
 
 #### Deliverables:
-- [ ] `pnpm dev` runs both apps
+- [ ] `npm run dev` runs both apps
 - [ ] Frontend can call backend via tRPC
 - [ ] D1 database connected
 
@@ -560,32 +558,32 @@ interface WeeklySummary {
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Start dev servers (both apps)
-pnpm dev
+npm run dev
 
 # Start individual apps
-pnpm --filter web dev
-pnpm --filter api dev
+npm run dev -w web
+npm run dev -w api
 
 # Database
-pnpm --filter api db:generate   # Generate migration
-pnpm --filter api db:migrate    # Run local migration
-pnpm --filter api db:studio     # Open Drizzle Studio
+npm run db:generate -w api   # Generate migration
+npm run db:migrate -w api    # Run local migration
+npm run db:studio -w api     # Open Drizzle Studio
 
 # Build
-pnpm build
+npm run build
 
 # Deploy
-pnpm --filter api deploy        # Deploy worker
-pnpm --filter web deploy        # Deploy to Pages
+npm run deploy -w api        # Deploy worker
+npm run deploy -w web        # Deploy to Pages
 
 # Type check
-pnpm typecheck
+npm run typecheck
 
 # Lint
-pnpm lint
+npm run lint
 ```
 
 ---
@@ -620,9 +618,9 @@ pnpm lint
 
 ## Getting Started
 
-1. Clone repo and install: `pnpm install`
-2. Set up local D1: `pnpm --filter api db:migrate`
-3. Start dev servers: `pnpm dev`
+1. Clone repo and install: `npm install`
+2. Set up local D1: `npm run db:migrate -w api`
+3. Start dev servers: `npm run dev`
 4. Open http://localhost:5173
 
 Begin with Phase 1, validating each deliverable before proceeding.
