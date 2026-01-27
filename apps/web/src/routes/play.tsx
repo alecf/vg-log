@@ -1,9 +1,10 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useTimerStore } from "@/stores/timer";
 import { trpc } from "@/lib/trpc";
 import { formatTime, formatDuration, cn } from "@/lib/utils";
+import { useAudioAlert } from "@/hooks/useAudioAlert";
 
 export const Route = createFileRoute("/play")({
   component: Play,
@@ -22,6 +23,13 @@ function Play() {
     setParentNotified,
     tick,
   } = useTimerStore();
+
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Audio alerts for timer warnings
+  const { initAudio } = useAudioAlert(alertState, !!activeSession, {
+    enabled: soundEnabled,
+  });
 
   const utils = trpc.useUtils();
 
@@ -98,15 +106,6 @@ function Play() {
     return () => clearInterval(interval);
   }, [activeSession]);
 
-  // Audio alert effect
-  useEffect(() => {
-    if (alertState === "urgent" || alertState === "exceeded") {
-      // Play alert sound (would need actual audio file)
-      // const audio = new Audio('/sounds/alert.mp3');
-      // audio.play().catch(() => {});
-    }
-  }, [alertState]);
-
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
@@ -182,7 +181,10 @@ function Play() {
         </button>
       ) : (
         <button
-          onClick={() => startSession.mutate({})}
+          onClick={() => {
+            initAudio(); // Initialize audio on user interaction
+            startSession.mutate({});
+          }}
           disabled={startSession.isPending}
           className={cn(
             "w-48 h-48 rounded-full text-2xl font-bold transition-all",
@@ -233,6 +235,14 @@ function Play() {
           </div>
         </div>
       )}
+
+      {/* Sound toggle */}
+      <button
+        onClick={() => setSoundEnabled(!soundEnabled)}
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {soundEnabled ? "Sound On" : "Sound Off"}
+      </button>
     </div>
   );
 }

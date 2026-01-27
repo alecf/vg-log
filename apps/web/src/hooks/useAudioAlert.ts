@@ -90,7 +90,7 @@ export function useAudioAlert(
 } {
   const mergedConfig = { ...defaultConfig, ...config };
   const lastAlertRef = useRef<AlertState>("ok");
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Initialize audio context (must be called from user interaction)
   const initAudio = useCallback(() => {
