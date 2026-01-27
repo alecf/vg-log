@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy --env production",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply vg-log-db --local",

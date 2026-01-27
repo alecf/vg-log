@@ -11,3 +11,13 @@ binding = "DB"
 database_name = "vg-log-db"
 database_id = "local"
 migrations_dir = "drizzle"
+
+[env.production]
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "vg-log-db"
+database_id = "7bb8835f-a548-4c7e-8f2c-e993f2cd2c67"
+migrations_dir = "drizzle"
