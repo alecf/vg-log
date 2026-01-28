@@ -35,3 +35,19 @@ export function formatTime(seconds: number): string {
 
   return `${sign}${minutes}:${pad(secs)}`;
 }
+
+export function formatClockTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+export function toTimeInputValue(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function fromTimeInputValue(timeStr: string, baseDate: Date): Date {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  const result = new Date(baseDate);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+}

@@ -8,7 +8,7 @@ import {
   parentProcedure,
 } from "../lib/trpc.js";
 import { sessions, users, limits, notifications } from "../db/schema.js";
-import { generateId, getWeekStart, getWeekEnd, getDurationMinutes } from "../lib/utils.js";
+import { generateId, getWeekStart, getWeekEnd, getDurationMinutes, getDayStart } from "../lib/utils.js";
 import { sessionListQuerySchema, manualSessionSchema } from "@vg-log/shared";
 
 export const sessionRouter = router({
@@ -206,6 +206,121 @@ export const sessionRouter = router({
         durationMinutes,
         isOverLimit,
         parentNotified: isOverLimit,
+      };
+    }),
+
+  // Adjust start time of active session (child only)
+  adjustStart: childProcedure
+    .input(
+      z.object({
+        sessionId: z.string().uuid(),
+        startTime: z.coerce.date(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.db.query.sessions.findFirst({
+        where: and(
+          eq(sessions.id, input.sessionId),
+          eq(sessions.userId, ctx.user.id),
+          isNull(sessions.endTime)
+        ),
+      });
+
+      if (!session) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Active session not found",
+        });
+      }
+
+      // Validate: new start time must not be in the future (compared to original start)
+      if (input.startTime > session.startTime) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Start time cannot be moved forward",
+        });
+      }
+
+      // Validate: new start time must be today or later
+      const todayStart = getDayStart(new Date(), ctx.family.timezone);
+      if (input.startTime < todayStart) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Start time cannot be before today",
+        });
+      }
+
+      await ctx.db
+        .update(sessions)
+        .set({ startTime: input.startTime })
+        .where(eq(sessions.id, input.sessionId));
+
+      return {
+        sessionId: input.sessionId,
+        startTime: input.startTime,
+      };
+    }),
+
+  // Adjust end time of a recently stopped session (child only)
+  adjustEnd: childProcedure
+    .input(
+      z.object({
+        sessionId: z.string().uuid(),
+        endTime: z.coerce.date(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.db.query.sessions.findFirst({
+        where: and(
+          eq(sessions.id, input.sessionId),
+          eq(sessions.userId, ctx.user.id),
+          not(isNull(sessions.endTime))
+        ),
+      });
+
+      if (!session) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stopped session not found",
+        });
+      }
+
+      // Validate: new end time must not be in the future (compared to original end)
+      if (input.endTime > session.endTime!) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "End time cannot be moved forward",
+        });
+      }
+
+      // Validate: new end time must be within 10 minutes of original end
+      const tenMinutesBeforeEnd = new Date(session.endTime!.getTime() - 10 * 60 * 1000);
+      if (input.endTime < tenMinutesBeforeEnd) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "End time cannot be more than 10 minutes earlier",
+        });
+      }
+
+      // Validate: end time must be after start time
+      if (input.endTime <= session.startTime) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "End time must be after start time",
+        });
+      }
+
+      await ctx.db
+        .update(sessions)
+        .set({ endTime: input.endTime })
+        .where(eq(sessions.id, input.sessionId));
+
+      const durationMinutes = getDurationMinutes(session.startTime, input.endTime);
+
+      return {
+        sessionId: input.sessionId,
+        endTime: input.endTime,
+        durationMinutes,
       };
     }),
 
