@@ -68,11 +68,12 @@ function Play() {
   const startSession = trpc.session.start.useMutation({
     onSuccess: (data) => {
       const startTime = new Date(data.startTime);
+      const origStartTime = new Date(data.originalStartTime);
       setActiveSession({
         id: data.sessionId,
         startTime: startTime,
       });
-      setOriginalStartTime(startTime);
+      setOriginalStartTime(origStartTime);
       if (data.parentNotified) {
         setParentNotified(true);
       }
@@ -84,12 +85,13 @@ function Play() {
   const stopSession = trpc.session.stop.useMutation({
     onSuccess: (data) => {
       const endTime = new Date(data.endTime);
+      const origEndTime = new Date(data.originalEndTime);
       // Move to stopped confirmation state
       setStoppedSession({
         id: data.sessionId,
         startTime: activeSession!.startTime,
         endTime: endTime,
-        originalEndTime: endTime,
+        originalEndTime: origEndTime,
       });
       setActiveSession(null);
       setOriginalStartTime(null);
@@ -128,13 +130,14 @@ function Play() {
   useEffect(() => {
     if (activeSessionData) {
       const startTime = new Date(activeSessionData.startTime);
+      const origStartTime = new Date(activeSessionData.originalStartTime);
       setActiveSession({
         id: activeSessionData.id,
         startTime: startTime,
       });
-      // Set original start time if we don't have one
+      // Set original start time from server
       if (!originalStartTime) {
-        setOriginalStartTime(startTime);
+        setOriginalStartTime(origStartTime);
       }
     } else if (activeSessionData === null && activeSession) {
       setActiveSession(null);

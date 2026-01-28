@@ -97,6 +97,7 @@ export const sessionRouter = router({
         familyId: ctx.family.id,
         startTime: now,
         endTime: null,
+        originalStartTime: now, // Track original for adjustment limits
         notes: input.notes ?? null,
         isManual: false,
         createdAt: now,
@@ -105,6 +106,7 @@ export const sessionRouter = router({
       return {
         sessionId,
         startTime: now,
+        originalStartTime: now,
         isOverLimit,
         parentNotified: isOverLimit,
       };
@@ -141,6 +143,7 @@ export const sessionRouter = router({
         .update(sessions)
         .set({
           endTime: now,
+          originalEndTime: now, // Track original for adjustment limits
           notes: input.notes ?? session.notes,
         })
         .where(eq(sessions.id, input.sessionId));
@@ -203,6 +206,7 @@ export const sessionRouter = router({
       return {
         sessionId: input.sessionId,
         endTime: now,
+        originalEndTime: now,
         durationMinutes,
         isOverLimit,
         parentNotified: isOverLimit,
@@ -233,11 +237,14 @@ export const sessionRouter = router({
         });
       }
 
-      // Validate: new start time must not be in the future (compared to original start)
-      if (input.startTime > session.startTime) {
+      // Use originalStartTime for validation (fallback to startTime for legacy sessions)
+      const originalStart = session.originalStartTime ?? session.startTime;
+
+      // Validate: new start time must not be after the original start time
+      if (input.startTime > originalStart) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Start time cannot be moved forward",
+          message: "Start time cannot be moved forward past original start time",
         });
       }
 
@@ -285,16 +292,19 @@ export const sessionRouter = router({
         });
       }
 
-      // Validate: new end time must not be in the future (compared to original end)
-      if (input.endTime > session.endTime!) {
+      // Use originalEndTime for validation (fallback to endTime for legacy sessions)
+      const originalEnd = session.originalEndTime ?? session.endTime!;
+
+      // Validate: new end time must not be after the original end time
+      if (input.endTime > originalEnd) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "End time cannot be moved forward",
+          message: "End time cannot be moved forward past original end time",
         });
       }
 
       // Validate: new end time must be within 10 minutes of original end
-      const tenMinutesBeforeEnd = new Date(session.endTime!.getTime() - 10 * 60 * 1000);
+      const tenMinutesBeforeEnd = new Date(originalEnd.getTime() - 10 * 60 * 1000);
       if (input.endTime < tenMinutesBeforeEnd) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -347,6 +357,7 @@ export const sessionRouter = router({
     return {
       id: activeSession.id,
       startTime: activeSession.startTime,
+      originalStartTime: activeSession.originalStartTime ?? activeSession.startTime,
       elapsedMinutes,
       notes: activeSession.notes,
     };

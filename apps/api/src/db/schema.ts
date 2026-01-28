@@ -41,6 +41,8 @@ export const sessions = sqliteTable(
       .references(() => families.id, { onDelete: "cascade" }),
     startTime: integer("start_time", { mode: "timestamp" }).notNull(),
     endTime: integer("end_time", { mode: "timestamp" }), // null = active session
+    originalStartTime: integer("original_start_time", { mode: "timestamp" }), // for adjustment limits
+    originalEndTime: integer("original_end_time", { mode: "timestamp" }), // for adjustment limits
     notes: text("notes"),
     isManual: integer("is_manual", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
