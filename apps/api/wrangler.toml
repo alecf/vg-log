@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "development"
+ALLOWED_ORIGINS = ""
 
 [[d1_databases]]
 binding = "DB"
@@ -15,6 +16,7 @@ migrations_dir = "drizzle"
 [env.production]
 [env.production.vars]
 ENVIRONMENT = "production"
+ALLOWED_ORIGINS = ".pages.dev,.workers.dev"
 
 [[env.production.d1_databases]]
 binding = "DB"

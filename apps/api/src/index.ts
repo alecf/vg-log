@@ -10,6 +10,7 @@ import type { Context } from "./lib/trpc.js";
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  ALLOWED_ORIGINS: string;
 };
 
 type Variables = {
@@ -19,24 +20,44 @@ type Variables = {
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // CORS configuration
-app.use(
-  "*",
-  cors({
+app.use("*", async (c, next) => {
+  const allowedOrigins = (c.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const isDev = c.env.ENVIRONMENT === "development";
+
+  return cors({
     origin: (origin) => {
-      // Allow localhost for development
-      if (origin?.includes("localhost") || origin?.includes("127.0.0.1")) {
+      if (!origin) return "";
+
+      let hostname: string;
+      try {
+        hostname = new URL(origin).hostname;
+      } catch {
+        return "";
+      }
+
+      // Allow localhost only in development
+      if (isDev && (hostname === "localhost" || hostname === "127.0.0.1")) {
         return origin;
       }
-      // Allow cloudflare pages domains
-      if (origin?.includes(".pages.dev") || origin?.includes(".workers.dev")) {
-        return origin;
-      }
-      // Allow custom domain (configure this for production)
-      return origin ?? "";
+
+      // Check against allowed origins list
+      // Entries starting with "." match as suffix (e.g., ".pages.dev" matches "foo.pages.dev")
+      // Other entries must match exactly
+      const isAllowed = allowedOrigins.some((allowed) => {
+        if (allowed.startsWith(".")) {
+          return hostname.endsWith(allowed) || hostname === allowed.slice(1);
+        }
+        return hostname === allowed;
+      });
+
+      return isAllowed ? origin : "";
     },
     credentials: true,
-  })
-);
+  })(c, next);
+});
 
 // Initialize DB middleware
 app.use("*", async (c, next) => {
