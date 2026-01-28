@@ -51,3 +51,45 @@ export function fromTimeInputValue(timeStr: string, baseDate: Date): Date {
   result.setHours(hours, minutes, 0, 0);
   return result;
 }
+
+export type AlertState = "ok" | "warning" | "urgent" | "exceeded";
+
+/**
+ * Returns Tailwind classes for alert state colors.
+ * @param state - The alert state (ok, warning, urgent, exceeded)
+ * @param type - Whether to apply text or background color (default: text)
+ * @returns Tailwind class string
+ */
+export function alertStateClasses(
+  state: AlertState | undefined | null,
+  type: "text" | "bg" | "border" = "text"
+): string {
+  if (!state) return "";
+
+  const colorMap: Record<AlertState, string> = {
+    ok: "ok",
+    warning: "warning",
+    urgent: "urgent",
+    exceeded: "exceeded",
+  };
+
+  const color = colorMap[state];
+  const pulseStates: AlertState[] = ["urgent", "exceeded"];
+  const shouldPulse = pulseStates.includes(state);
+
+  return cn(`${type}-${color}`, shouldPulse && "animate-pulse");
+}
+
+/**
+ * Returns full alert state styling for common use cases.
+ * @param state - The alert state
+ * @returns Object with text and background classes
+ */
+export function alertStateStyles(state: AlertState | undefined | null) {
+  return {
+    text: alertStateClasses(state, "text"),
+    bg: alertStateClasses(state, "bg"),
+    bgSubtle: state ? `bg-${state}/20` : "",
+    border: alertStateClasses(state, "border"),
+  };
+}

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { Button, Card, Input } from "@/components";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -80,18 +81,12 @@ function ChooseStep({
 }) {
   return (
     <div className="space-y-4">
-      <button
-        onClick={onCreateFamily}
-        className="w-full rounded-xl bg-primary p-4 text-primary-foreground font-medium hover:bg-primary/90 transition"
-      >
+      <Button fullWidth size="lg" onClick={onCreateFamily}>
         Create a Family
-      </button>
-      <button
-        onClick={onJoinFamily}
-        className="w-full rounded-xl bg-card border border-border p-4 font-medium hover:bg-muted transition"
-      >
+      </Button>
+      <Button fullWidth size="lg" variant="secondary" onClick={onJoinFamily}>
         Join a Family
-      </button>
+      </Button>
     </div>
   );
 }
@@ -155,7 +150,7 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
 
   if (createdCodes) {
     return (
-      <div className="space-y-4 rounded-xl bg-card p-6">
+      <Card padding="lg" className="space-y-4">
         <h2 className="text-xl font-semibold">Family Created!</h2>
 
         <div className="space-y-3">
@@ -175,73 +170,59 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
         <p className="text-sm text-muted-foreground">
           You can view these codes anytime in Family Settings.
         </p>
-        <button
-          onClick={handleContinue}
-          disabled={loginMutation.isPending}
-          className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
+        <Button fullWidth onClick={handleContinue} disabled={loginMutation.isPending}>
           {loginMutation.isPending ? "Logging in..." : "Continue to Dashboard"}
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-xl bg-card p-6">
-      <button onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground">
+    <Card padding="lg" className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={onBack}>
         &larr; Back
-      </button>
+      </Button>
       <h2 className="text-xl font-semibold">Create a Family</h2>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Family Name</label>
-        <input
-          type="text"
-          value={familyName}
-          onChange={(e) => setFamilyName(e.target.value)}
-          placeholder="The Smith Family"
-          className="w-full rounded-lg bg-muted border border-border p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <Input
+        label="Family Name"
+        type="text"
+        value={familyName}
+        onChange={(e) => setFamilyName(e.target.value)}
+        placeholder="The Smith Family"
+      />
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Your Name</label>
-        <input
-          type="text"
-          value={parentName}
-          onChange={(e) => setParentName(e.target.value)}
-          placeholder="Mom / Dad"
-          className="w-full rounded-lg bg-muted border border-border p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <Input
+        label="Your Name"
+        type="text"
+        value={parentName}
+        onChange={(e) => setParentName(e.target.value)}
+        placeholder="Mom / Dad"
+      />
 
-      <div>
-        <label className="block text-sm font-medium mb-1">4-Digit PIN</label>
-        <input
-          type="password"
-          inputMode="numeric"
-          maxLength={4}
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-          placeholder="****"
-          className="w-full rounded-lg bg-muted border border-border p-3 text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <Input
+        label="4-Digit PIN"
+        variant="pin"
+        type="password"
+        inputMode="numeric"
+        maxLength={4}
+        value={pin}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+        placeholder="****"
+      />
 
       {createFamily.error && (
         <p className="text-sm text-exceeded">{createFamily.error.message}</p>
       )}
 
-      <button
+      <Button
+        fullWidth
         onClick={handleCreate}
-        disabled={
-          !familyName || !parentName || pin.length !== 4 || createFamily.isPending
-        }
-        className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        disabled={!familyName || !parentName || pin.length !== 4 || createFamily.isPending}
       >
         {createFamily.isPending ? "Creating..." : "Create Family"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }
 
@@ -275,25 +256,24 @@ function JoinFamilyStep({
   };
 
   return (
-    <div className="space-y-4 rounded-xl bg-card p-6">
-      <button onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground">
+    <Card padding="lg" className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={onBack}>
         &larr; Back
-      </button>
+      </Button>
       <h2 className="text-xl font-semibold">Join a Family</h2>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Invite Code</label>
-        <input
-          type="text"
-          value={inviteCode}
-          onChange={(e) => {
-            setInviteCode(e.target.value.toUpperCase().slice(0, 6));
-            setError("");
-          }}
-          placeholder="ABC123"
-          className="w-full rounded-lg bg-muted border border-border p-3 text-center text-2xl tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <Input
+        label="Invite Code"
+        type="text"
+        value={inviteCode}
+        onChange={(e) => {
+          setInviteCode(e.target.value.toUpperCase().slice(0, 6));
+          setError("");
+        }}
+        placeholder="ABC123"
+        className="uppercase"
+        variant="pin"
+      />
 
       {inviteCode.length === 6 && checkCode.data && (
         <p className="text-sm text-ok">Found: {checkCode.data.familyName}</p>
@@ -307,14 +287,14 @@ function JoinFamilyStep({
 
       {error && <p className="text-sm text-exceeded">{error}</p>}
 
-      <button
+      <Button
+        fullWidth
         onClick={handleSubmit}
         disabled={inviteCode.length !== 6 || !checkCode.data}
-        className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         Continue
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }
 
@@ -373,42 +353,33 @@ function SelectMemberStep({
     // Check if this code has already been used for a new account
     if (codeAlreadyUsed) {
       return (
-        <div className="space-y-4 rounded-xl bg-card p-6">
-          <button
-            onClick={() => setIsAddingNew(false)}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
+        <Card padding="lg" className="space-y-4">
+          <Button variant="ghost" size="sm" onClick={() => setIsAddingNew(false)}>
             &larr; Back
-          </button>
+          </Button>
           <h2 className="text-xl font-semibold">Already Used</h2>
           <p className="text-muted-foreground">
             This invite code has already been used to create an account on this device.
             Please select your existing account or ask a parent for a new code.
           </p>
-        </div>
+        </Card>
       );
     }
 
     return (
-      <div className="space-y-4 rounded-xl bg-card p-6">
-        <button
-          onClick={() => setIsAddingNew(false)}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
+      <Card padding="lg" className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setIsAddingNew(false)}>
           &larr; Back
-        </button>
+        </Button>
         <h2 className="text-xl font-semibold">Join {data?.familyName}</h2>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Your Name</label>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Your name"
-            className="w-full rounded-lg bg-muted border border-border p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
+        <Input
+          label="Your Name"
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Your name"
+        />
 
         <div className="rounded-lg bg-muted/50 p-3">
           <p className="text-sm text-muted-foreground">
@@ -416,19 +387,17 @@ function SelectMemberStep({
           </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Create a 4-Digit PIN</label>
-          <p className="text-xs text-muted-foreground mb-2">You'll use this to log in</p>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={4}
-            value={newPin}
-            onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
-            placeholder="****"
-            className="w-full rounded-lg bg-muted border border-border p-3 text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
+        <Input
+          label="Create a 4-Digit PIN"
+          hint="You'll use this to log in"
+          variant="pin"
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={newPin}
+          onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+          placeholder="****"
+        />
 
         {(joinFamily.error || loginMutation.error) && (
           <p className="text-sm text-exceeded">
@@ -436,7 +405,8 @@ function SelectMemberStep({
           </p>
         )}
 
-        <button
+        <Button
+          fullWidth
           onClick={() =>
             joinFamily.mutate({
               inviteCode,
@@ -446,19 +416,18 @@ function SelectMemberStep({
             })
           }
           disabled={!newName || newPin.length !== 4 || joinFamily.isPending || loginMutation.isPending}
-          className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {joinFamily.isPending || loginMutation.isPending ? "Joining..." : "Join Family"}
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-xl bg-card p-6">
-      <button onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground">
+    <Card padding="lg" className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={onBack}>
         &larr; Back
-      </button>
+      </Button>
       <h2 className="text-xl font-semibold">Who are you?</h2>
       <p className="text-sm text-muted-foreground">{data?.familyName}</p>
 
@@ -482,7 +451,7 @@ function SelectMemberStep({
       >
         + I'm new here
       </button>
-    </div>
+    </Card>
   );
 }
 
@@ -517,14 +486,15 @@ function EnterPinStep({
   });
 
   return (
-    <div className="space-y-4 rounded-xl bg-card p-6">
-      <button onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground">
+    <Card padding="lg" className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={onBack}>
         &larr; Back
-      </button>
+      </Button>
       <h2 className="text-xl font-semibold">Hi, {member.name}!</h2>
       <p className="text-sm text-muted-foreground">Enter your PIN to continue</p>
 
-      <input
+      <Input
+        variant="pin"
         type="password"
         inputMode="numeric"
         maxLength={4}
@@ -532,20 +502,20 @@ function EnterPinStep({
         onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
         placeholder="****"
         autoFocus
-        className="w-full rounded-lg bg-muted border border-border p-4 text-center text-3xl tracking-widest focus:outline-none focus:ring-2 focus:ring-primary"
+        className="text-3xl"
       />
 
       {loginMutation.error && (
         <p className="text-sm text-exceeded">Wrong PIN, try again</p>
       )}
 
-      <button
+      <Button
+        fullWidth
         onClick={() => loginMutation.mutate({ oderId: member.id, pin })}
         disabled={pin.length !== 4 || loginMutation.isPending}
-        className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         {loginMutation.isPending ? "Logging in..." : "Login"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }

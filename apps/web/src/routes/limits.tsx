@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { trpc } from "@/lib/trpc";
 import { formatDuration, cn } from "@/lib/utils";
+import { Button, Card, Input, ProgressBar } from "@/components";
 
 export const Route = createFileRoute("/limits")({
   component: Limits,
@@ -56,10 +57,10 @@ function LimitsContent() {
         <div className="animate-pulse space-y-4">
           <div className="grid grid-cols-3 gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 rounded-xl bg-card" />
+              <Card key={i} className="h-16" />
             ))}
           </div>
-          <div className="h-48 rounded-xl bg-card" />
+          <Card className="h-48" />
         </div>
       </div>
     );
@@ -69,10 +70,10 @@ function LimitsContent() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Time Limits</h1>
-        <div className="rounded-xl bg-exceeded/10 border border-exceeded/20 p-6 text-center">
+        <Card variant="alert" padding="lg" className="text-center">
           <p className="text-exceeded font-medium">Failed to load family members</p>
           <p className="text-sm text-muted-foreground mt-1">{membersError.message}</p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -102,12 +103,12 @@ function LimitsContent() {
       <h1 className="text-2xl font-bold">Time Limits</h1>
 
       {children.length === 0 ? (
-        <div className="rounded-xl bg-card p-6 text-center">
+        <Card padding="lg" className="text-center">
           <p className="text-muted-foreground">No children in your family yet.</p>
           <p className="text-sm text-muted-foreground mt-1">
             Share your family code to invite them.
           </p>
-        </div>
+        </Card>
       ) : (
         <>
           {/* Child selector */}
@@ -140,7 +141,7 @@ function LimitsContent() {
             <>
               {/* Current stats */}
               {childStats && (
-                <div className="rounded-xl bg-card p-4">
+                <Card>
                   <h3 className="font-medium mb-2">{selectedChild.name}'s Week</h3>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold font-mono">
@@ -153,28 +154,18 @@ function LimitsContent() {
                     )}
                   </div>
                   {childStats.weeklyLimitMinutes !== null && (
-                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full transition-all",
-                          childStats.isOverLimit ? "bg-exceeded" : "bg-ok"
-                        )}
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            (childStats.weeklyMinutes /
-                              childStats.weeklyLimitMinutes) *
-                              100
-                          )}%`,
-                        }}
-                      />
-                    </div>
+                    <ProgressBar
+                      value={childStats.weeklyMinutes}
+                      max={childStats.weeklyLimitMinutes}
+                      alertState={childStats.isOverLimit ? "exceeded" : "ok"}
+                      className="mt-2"
+                    />
                   )}
-                </div>
+                </Card>
               )}
 
               {/* Limit setter */}
-              <div className="rounded-xl bg-card p-4 space-y-4">
+              <Card className="space-y-4">
                 <h3 className="font-medium">Set Weekly Limit</h3>
 
                 {currentWeeklyLimit && (
@@ -206,46 +197,38 @@ function LimitsContent() {
 
                 {/* Custom input */}
                 <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm text-muted-foreground mb-1">
-                      Hours
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={168}
-                      value={hours}
-                      onChange={(e) => setHours(parseInt(e.target.value) || 0)}
-                      className="w-full rounded-lg bg-muted border border-border p-3 text-center text-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+                  <Input
+                    variant="centered"
+                    label="Hours"
+                    type="number"
+                    min={0}
+                    max={168}
+                    value={hours}
+                    onChange={(e) => setHours(parseInt(e.target.value) || 0)}
+                  />
                   <span className="text-2xl text-muted-foreground mt-6">:</span>
-                  <div className="flex-1">
-                    <label className="block text-sm text-muted-foreground mb-1">
-                      Minutes
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={59}
-                      value={minutes}
-                      onChange={(e) => setMinutes(parseInt(e.target.value) || 0)}
-                      className="w-full rounded-lg bg-muted border border-border p-3 text-center text-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+                  <Input
+                    variant="centered"
+                    label="Minutes"
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={minutes}
+                    onChange={(e) => setMinutes(parseInt(e.target.value) || 0)}
+                  />
                 </div>
 
                 <p className="text-center text-lg">
                   = <span className="font-bold">{formatDuration(hours * 60 + minutes)}</span> per week
                 </p>
 
-                <button
+                <Button
+                  fullWidth
                   onClick={handleSetLimit}
                   disabled={setLimit.isPending || (hours === 0 && minutes === 0)}
-                  className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {setLimit.isPending ? "Saving..." : "Set Limit"}
-                </button>
+                </Button>
 
                 {setLimit.isSuccess && (
                   <p className="text-sm text-ok text-center">Limit updated!</p>
@@ -254,20 +237,21 @@ function LimitsContent() {
                 {setLimit.error && (
                   <p className="text-sm text-exceeded text-center">{setLimit.error.message}</p>
                 )}
-              </div>
+              </Card>
 
               {/* Remove limit option */}
               {currentWeeklyLimit && (
-                <button
+                <Button
+                  variant="ghost"
+                  fullWidth
                   onClick={() => {
                     // Set to 0 to effectively remove the limit (or could add delete mutation)
                     setHours(0);
                     setMinutes(0);
                   }}
-                  className="w-full text-sm text-muted-foreground hover:text-foreground"
                 >
                   Remove limit
-                </button>
+                </Button>
               )}
             </>
           )}

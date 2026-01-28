@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { trpc } from "@/lib/trpc";
 import { formatDuration, cn } from "@/lib/utils";
+import { Button, Card, ProgressBar } from "@/components";
 
 export const Route = createFileRoute("/summary")({
   component: Summary,
@@ -61,40 +62,34 @@ function Summary() {
       {user?.role === "parent" && children.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {children.map((child) => (
-            <button
+            <Button
               key={child.id}
+              variant={(selectedChildId ?? children[0]?.id) === child.id ? "primary" : "secondary"}
+              size="sm"
               onClick={() => setSelectedChildId(child.id)}
-              className={cn(
-                "rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition",
-                (selectedChildId ?? children[0]?.id) === child.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card hover:bg-muted"
-              )}
+              className="whitespace-nowrap"
             >
               {child.name}
-            </button>
+            </Button>
           ))}
         </div>
       )}
 
       {/* No children message for parents */}
       {user?.role === "parent" && children.length === 0 && (
-        <div className="rounded-xl bg-card p-6 text-center">
+        <Card padding="lg" className="text-center">
           <p className="text-muted-foreground">No children in your family yet.</p>
           <p className="text-sm text-muted-foreground mt-1">
             Share your family code to invite them.
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Week navigation */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => setWeekOffset(weekOffset - 1)}
-          className="rounded-lg bg-card p-2 hover:bg-muted"
-        >
+        <Button variant="secondary" size="sm" onClick={() => setWeekOffset(weekOffset - 1)}>
           &larr; Previous
-        </button>
+        </Button>
         <div className="text-center">
           <h1 className="text-xl font-semibold">
             {selectedChild ? `${selectedChild.name}'s ` : ""}
@@ -110,24 +105,25 @@ function Summary() {
             </p>
           )}
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setWeekOffset(Math.min(0, weekOffset + 1))}
           disabled={weekOffset >= 0}
-          className="rounded-lg bg-card p-2 hover:bg-muted disabled:opacity-30"
         >
           Next &rarr;
-        </button>
+        </Button>
       </div>
 
       {isLoading ? (
         <div className="space-y-4 animate-pulse">
-          <div className="h-32 rounded-xl bg-card" />
-          <div className="h-48 rounded-xl bg-card" />
+          <Card className="h-32" />
+          <Card className="h-48" />
         </div>
       ) : summary ? (
         <>
           {/* Total summary card */}
-          <div className="rounded-xl bg-card p-6 text-center">
+          <Card padding="lg" className="text-center">
             <p className="text-sm text-muted-foreground mb-2">Total time played</p>
             <p
               className={cn(
@@ -146,22 +142,13 @@ function Summary() {
                 <p className="text-muted-foreground mt-2">
                   of {formatDuration(summary.limitMinutes)} limit
                 </p>
-                <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={cn(
-                      "h-full transition-all",
-                      summary.totalMinutes > summary.limitMinutes
-                        ? "bg-exceeded"
-                        : "bg-ok"
-                    )}
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (summary.totalMinutes / summary.limitMinutes) * 100
-                      )}%`,
-                    }}
-                  />
-                </div>
+                <ProgressBar
+                  value={summary.totalMinutes}
+                  max={summary.limitMinutes}
+                  alertState={summary.totalMinutes > summary.limitMinutes ? "exceeded" : "ok"}
+                  size="md"
+                  className="mt-4"
+                />
               </>
             )}
 
@@ -192,10 +179,10 @@ function Summary() {
                 </p>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Daily breakdown */}
-          <div className="rounded-xl bg-card p-4">
+          <Card>
             <h2 className="font-semibold mb-4">Daily Breakdown</h2>
             <div className="space-y-3">
               {summary.dailyBreakdown.map((day, index) => (
@@ -224,10 +211,10 @@ function Summary() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Sessions list */}
-          <div className="rounded-xl bg-card p-4">
+          <Card>
             <h2 className="font-semibold mb-4">
               Sessions ({summary.sessions.length})
             </h2>
@@ -272,7 +259,7 @@ function Summary() {
             ) : (
               <p className="text-sm text-muted-foreground">No sessions this week</p>
             )}
-          </div>
+          </Card>
         </>
       ) : (
         <p className="text-center text-muted-foreground">No data available</p>

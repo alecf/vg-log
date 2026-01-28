@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { Button, Card } from "@/components";
 
 export const Route = createFileRoute("/family")({
   component: Family,
@@ -67,14 +68,14 @@ function Family() {
       <h1 className="text-2xl font-bold">Family Settings</h1>
 
       {/* Family info */}
-      <div className="rounded-xl bg-card p-4">
+      <Card>
         <h2 className="font-semibold mb-2">Family</h2>
         <p className="text-lg">{family?.name}</p>
-      </div>
+      </Card>
 
       {/* Lockdown toggle */}
       {inviteCodes && (
-        <div className="rounded-xl bg-card p-4">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold">Family Lockdown</h2>
@@ -100,11 +101,11 @@ function Family() {
               />
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Invite codes */}
-      <div className="rounded-xl bg-card p-4 space-y-4">
+      <Card className="space-y-4">
         <h2 className="font-semibold">Invite Codes</h2>
         <p className="text-sm text-muted-foreground">
           Share these codes with family members to let them join
@@ -116,27 +117,31 @@ function Family() {
             <p className="text-sm font-medium">Child Invite Code</p>
             {confirmRegenerate === "child" ? (
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => regenerateCode.mutate({ codeType: "child" })}
                   disabled={regenerateCode.isPending}
-                  className="text-xs text-exceeded hover:underline"
+                  className="text-exceeded"
                 >
                   Confirm
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setConfirmRegenerate(null)}
-                  className="text-xs text-muted-foreground hover:underline"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             ) : (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setConfirmRegenerate("child")}
-                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Regenerate
-              </button>
+              </Button>
             )}
           </div>
           {showChildCode ? (
@@ -144,26 +149,25 @@ function Family() {
               <p className="text-2xl font-mono font-bold tracking-wider flex-1">
                 {inviteCodes?.childCode}
               </p>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => navigator.clipboard.writeText(inviteCodes?.childCode ?? "")}
-                className="rounded-lg bg-background px-3 py-1 text-sm hover:bg-background/80"
               >
                 Copy
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowChildCode(false)}
-                className="text-sm text-muted-foreground hover:text-foreground"
               >
                 Hide
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowChildCode(true)}
-              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
-            >
+            <Button size="sm" onClick={() => setShowChildCode(true)}>
               Show Code
-            </button>
+            </Button>
           )}
           <p className="text-xs text-muted-foreground mt-2">Share with your kids</p>
         </div>
@@ -174,27 +178,31 @@ function Family() {
             <p className="text-sm font-medium">Parent Invite Code</p>
             {confirmRegenerate === "parent" ? (
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => regenerateCode.mutate({ codeType: "parent" })}
                   disabled={regenerateCode.isPending}
-                  className="text-xs text-exceeded hover:underline"
+                  className="text-exceeded"
                 >
                   Confirm
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setConfirmRegenerate(null)}
-                  className="text-xs text-muted-foreground hover:underline"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             ) : (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setConfirmRegenerate("parent")}
-                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Regenerate
-              </button>
+              </Button>
             )}
           </div>
           {showParentCode ? (
@@ -202,33 +210,32 @@ function Family() {
               <p className="text-2xl font-mono font-bold tracking-wider flex-1">
                 {inviteCodes?.parentCode}
               </p>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => navigator.clipboard.writeText(inviteCodes?.parentCode ?? "")}
-                className="rounded-lg bg-background px-3 py-1 text-sm hover:bg-background/80"
               >
                 Copy
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowParentCode(false)}
-                className="text-sm text-muted-foreground hover:text-foreground"
               >
                 Hide
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowParentCode(true)}
-              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
-            >
+            <Button size="sm" onClick={() => setShowParentCode(true)}>
               Show Code
-            </button>
+            </Button>
           )}
           <p className="text-xs text-muted-foreground mt-2">Share with other parents only</p>
         </div>
-      </div>
+      </Card>
 
       {/* Members list */}
-      <div className="rounded-xl bg-card p-4">
+      <Card>
         <h2 className="font-semibold mb-4">Family Members</h2>
 
         {isLoading ? (
@@ -274,27 +281,31 @@ function Family() {
                       <p className="font-medium">{child.name}</p>
                       {confirmKick === child.id ? (
                         <div className="flex gap-2">
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => kickMember.mutate({ userId: child.id })}
                             disabled={kickMember.isPending}
-                            className="text-sm text-exceeded hover:underline"
+                            className="text-exceeded"
                           >
                             Confirm Remove
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setConfirmKick(null)}
-                            className="text-sm text-muted-foreground hover:underline"
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       ) : (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setConfirmKick(child.id)}
-                          className="text-sm text-muted-foreground hover:text-exceeded"
                         >
                           Remove
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ))}
@@ -307,10 +318,10 @@ function Family() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Notification preferences */}
-      <div className="rounded-xl bg-card p-4">
+      <Card>
         <h2 className="font-semibold mb-2">Notification Preferences</h2>
         <p className="text-sm text-muted-foreground mb-4">
           How would you like to be notified when a child exceeds their limit?
@@ -362,7 +373,7 @@ function Family() {
             </label>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { trpc } from "@/lib/trpc";
 import { formatDuration, cn } from "@/lib/utils";
+import { Button, Card } from "@/components";
 
 export const Route = createFileRoute("/calendar")({
   component: Calendar,
@@ -123,70 +124,61 @@ function Calendar() {
       {user?.role === "parent" && children.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {children.map((child) => (
-            <button
+            <Button
               key={child.id}
+              variant={(selectedChildId ?? children[0]?.id) === child.id ? "primary" : "secondary"}
+              size="sm"
               onClick={() => setSelectedChildId(child.id)}
-              className={cn(
-                "rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition",
-                (selectedChildId ?? children[0]?.id) === child.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card hover:bg-muted"
-              )}
+              className="whitespace-nowrap"
             >
               {child.name}
-            </button>
+            </Button>
           ))}
         </div>
       )}
 
       {/* No children message for parents */}
       {user?.role === "parent" && children.length === 0 && (
-        <div className="rounded-xl bg-card p-6 text-center">
+        <Card padding="lg" className="text-center">
           <p className="text-muted-foreground">No children in your family yet.</p>
           <p className="text-sm text-muted-foreground mt-1">
             Share your family code to invite them.
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={goToPrevMonth}
-          className="rounded-lg bg-card p-2 hover:bg-muted"
-        >
+        <Button variant="secondary" size="sm" onClick={goToPrevMonth}>
           &larr;
-        </button>
+        </Button>
         <h1 className="text-xl font-semibold">
           {selectedChild ? `${selectedChild.name}'s ` : ""}
           {monthNames[month - 1]} {year}
         </h1>
-        <button
-          onClick={goToNextMonth}
-          className="rounded-lg bg-card p-2 hover:bg-muted"
-        >
+        <Button variant="secondary" size="sm" onClick={goToNextMonth}>
           &rarr;
-        </button>
+        </Button>
       </div>
 
       {/* Month summary */}
       {calendar && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl bg-card p-4">
+          <Card>
             <p className="text-sm text-muted-foreground">Total this month</p>
             <p className="text-2xl font-bold font-mono">
               {formatDuration(calendar.totalMonthMinutes)}
             </p>
-          </div>
-          <div className="rounded-xl bg-card p-4">
+          </Card>
+          <Card>
             <p className="text-sm text-muted-foreground">Sessions</p>
             <p className="text-2xl font-bold">{calendar.totalSessions}</p>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Calendar grid */}
-      <div className="rounded-xl bg-card p-4">
+      <Card>
         {isLoading ? (
           <div className="h-64 animate-pulse bg-muted rounded" />
         ) : (
@@ -227,7 +219,7 @@ function Calendar() {
             </div>
           </>
         )}
-      </div>
+      </Card>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 justify-center text-xs">
@@ -255,7 +247,7 @@ function Calendar() {
 
       {/* Selected day detail */}
       {selectedDay && (
-        <div className="rounded-xl bg-card p-4">
+        <Card>
           <h3 className="font-semibold mb-2">
             {monthNames[month - 1]} {selectedDay}, {year}
           </h3>
@@ -275,7 +267,7 @@ function Calendar() {
           ) : (
             <p className="text-muted-foreground">No gaming this day</p>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

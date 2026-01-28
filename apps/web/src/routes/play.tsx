@@ -10,8 +10,10 @@ import {
   formatClockTime,
   toTimeInputValue,
   fromTimeInputValue,
+  alertStateClasses,
 } from "@/lib/utils";
 import { useAudioAlert } from "@/hooks/useAudioAlert";
+import { Button, Card, ProgressBar } from "@/components";
 
 export const Route = createFileRoute("/play")({
   component: Play,
@@ -296,32 +298,24 @@ function Play() {
 
         {/* Progress bar */}
         {weeklyLimitMinutes !== null && (
-          <div className="w-full max-w-xs">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>{formatDuration(weeklyUsedMinutes)} used</span>
-              <span>{formatDuration(weeklyLimitMinutes)} limit</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  "h-full transition-all duration-1000",
-                  isOverLimit ? "bg-exceeded" : "bg-ok"
-                )}
-                style={{
-                  width: `${Math.min(100, (weeklyUsedMinutes / weeklyLimitMinutes) * 100)}%`,
-                }}
-              />
-            </div>
-          </div>
+          <ProgressBar
+            value={weeklyUsedMinutes}
+            max={weeklyLimitMinutes}
+            alertState={isOverLimit ? "exceeded" : "ok"}
+            showLabels
+            leftLabel={`${formatDuration(weeklyUsedMinutes)} used`}
+            rightLabel={`${formatDuration(weeklyLimitMinutes)} limit`}
+            className="max-w-xs"
+          />
         )}
 
         {/* Sound toggle */}
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          {soundEnabled ? "🔊 Sound On" : "🔇 Sound Off"}
-        </button>
+          {soundEnabled ? "Sound On" : "Sound Off"}
+        </Button>
       </div>
     );
   }
@@ -336,10 +330,7 @@ function Play() {
           <p
             className={cn(
               "text-5xl font-bold font-mono transition-colors",
-              alertState === "ok" && "text-ok",
-              alertState === "warning" && "text-warning",
-              alertState === "urgent" && "text-urgent animate-pulse",
-              alertState === "exceeded" && "text-exceeded animate-pulse"
+              alertStateClasses(alertState, "text")
             )}
           >
             {remainingSeconds !== null ? formatTime(remainingSeconds) : "No limit"}
@@ -354,7 +345,7 @@ function Play() {
         )}
 
         {/* START REGION - Always visible during active session */}
-        <div className="w-full max-w-xs bg-card rounded-xl p-4 border">
+        <Card className="w-full max-w-xs border">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Started at</p>
@@ -376,13 +367,14 @@ function Play() {
               )}
             </div>
             {!editingStartTime && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setEditingStartTime(true)}
                 disabled={adjustStart.isPending}
-                className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
               >
                 {adjustStart.isPending ? "..." : "Adjust"}
-              </button>
+              </Button>
             )}
           </div>
           {editingStartTime && (
@@ -390,7 +382,7 @@ function Play() {
               Can adjust back to midnight today
             </p>
           )}
-        </div>
+        </Card>
 
         {/* Playing for timer */}
         <div className="text-center">
@@ -417,40 +409,24 @@ function Play() {
 
         {/* Progress bar */}
         {weeklyLimitMinutes !== null && (
-          <div className="w-full max-w-xs">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>
-                {formatDuration(weeklyUsedMinutes + Math.floor(elapsedSeconds / 60))} used
-              </span>
-              <span>{formatDuration(weeklyLimitMinutes)} limit</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  "h-full transition-all duration-1000",
-                  alertState === "ok" && "bg-ok",
-                  alertState === "warning" && "bg-warning",
-                  alertState === "urgent" && "bg-urgent",
-                  alertState === "exceeded" && "bg-exceeded"
-                )}
-                style={{
-                  width: `${Math.min(
-                    100,
-                    ((weeklyUsedMinutes + elapsedSeconds / 60) / weeklyLimitMinutes) * 100
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
+          <ProgressBar
+            value={weeklyUsedMinutes + Math.floor(elapsedSeconds / 60)}
+            max={weeklyLimitMinutes}
+            alertState={alertState}
+            showLabels
+            leftLabel={`${formatDuration(weeklyUsedMinutes + Math.floor(elapsedSeconds / 60))} used`}
+            rightLabel={`${formatDuration(weeklyLimitMinutes)} limit`}
+            className="max-w-xs"
+          />
         )}
 
         {/* Sound toggle */}
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          {soundEnabled ? "🔊 Sound On" : "🔇 Sound Off"}
-        </button>
+          {soundEnabled ? "Sound On" : "Sound Off"}
+        </Button>
       </div>
     );
   }
@@ -471,15 +447,15 @@ function Play() {
         </div>
 
         {/* START REGION - Read only now */}
-        <div className="w-full max-w-xs bg-card rounded-xl p-4 border opacity-60">
+        <Card className="w-full max-w-xs border opacity-60">
           <p className="text-xs text-muted-foreground">Started at</p>
           <p className="text-lg font-medium">
             {formatClockTime(stoppedSession.startTime)}
           </p>
-        </div>
+        </Card>
 
         {/* STOP REGION - Editable */}
-        <div className="w-full max-w-xs bg-card rounded-xl p-4 border border-primary">
+        <Card className="w-full max-w-xs border border-primary">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Stopped at</p>
@@ -501,13 +477,14 @@ function Play() {
               )}
             </div>
             {!editingEndTime && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setEditingEndTime(true)}
                 disabled={adjustEnd.isPending}
-                className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
               >
                 {adjustEnd.isPending ? "..." : "Adjust"}
-              </button>
+              </Button>
             )}
           </div>
           {editingEndTime && (
@@ -515,18 +492,17 @@ function Play() {
               Can adjust up to 10 minutes earlier
             </p>
           )}
-        </div>
+        </Card>
 
         {/* Done button */}
-        <button
+        <Button
+          fullWidth
+          size="lg"
           onClick={handleDone}
-          className={cn(
-            "w-full max-w-xs py-4 rounded-xl text-lg font-bold transition-all",
-            "bg-primary text-primary-foreground hover:bg-primary/90"
-          )}
+          className="max-w-xs"
         >
           Done
-        </button>
+        </Button>
       </div>
     );
   }

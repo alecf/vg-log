@@ -1,8 +1,8 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/stores/auth";
 import { trpc } from "@/lib/trpc";
-import { formatDuration } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { formatDuration, cn, alertStateClasses } from "@/lib/utils";
+import { Card, ProgressBar } from "@/components";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -37,15 +37,12 @@ function ChildDashboard() {
   return (
     <div className="space-y-6">
       {/* Remaining time hero */}
-      <div className="rounded-xl bg-card p-6 text-center">
+      <Card padding="lg" className="text-center">
         <p className="text-sm text-muted-foreground mb-2">Time remaining this week</p>
         <p
           className={cn(
             "text-5xl font-bold font-mono",
-            remaining?.alertState === "ok" && "text-ok",
-            remaining?.alertState === "warning" && "text-warning",
-            remaining?.alertState === "urgent" && "text-urgent",
-            remaining?.alertState === "exceeded" && "text-exceeded"
+            alertStateClasses(remaining?.alertState, "text")
           )}
         >
           {remainingMinutes !== null ? formatDuration(remainingMinutes) : "No limit set"}
@@ -58,18 +55,12 @@ function ChildDashboard() {
 
         {/* Progress bar */}
         {limitMinutes !== null && (
-          <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn(
-                "h-full transition-all duration-300",
-                remaining?.alertState === "ok" && "bg-ok",
-                remaining?.alertState === "warning" && "bg-warning",
-                remaining?.alertState === "urgent" && "bg-urgent",
-                remaining?.alertState === "exceeded" && "bg-exceeded"
-              )}
-              style={{
-                width: `${Math.min(100, (usedMinutes / limitMinutes) * 100)}%`,
-              }}
+          <div className="mt-4">
+            <ProgressBar
+              value={usedMinutes}
+              max={limitMinutes}
+              alertState={remaining?.alertState}
+              size="md"
             />
           </div>
         )}
@@ -81,20 +72,20 @@ function ChildDashboard() {
             <p className="text-sm opacity-75">Your parents have been notified.</p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Active session indicator */}
       {remaining?.activeSession && (
-        <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
+        <Card className="bg-primary/10 border border-primary/20">
           <p className="text-sm text-muted-foreground">Currently playing</p>
           <p className="text-2xl font-bold text-primary font-mono">
             {formatDuration(remaining.activeSession.elapsedMinutes)}
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Recent sessions */}
-      <div className="rounded-xl bg-card p-4">
+      <Card>
         <h2 className="font-semibold mb-4">Recent Sessions</h2>
         {overview?.recentSessions && overview.recentSessions.length > 0 ? (
           <div className="space-y-2">
@@ -132,7 +123,7 @@ function ChildDashboard() {
         ) : (
           <p className="text-sm text-muted-foreground">No sessions this week</p>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -151,7 +142,7 @@ function ParentDashboard() {
 
       {/* Notifications */}
       {notifications && notifications.length > 0 && (
-        <div className="rounded-xl bg-exceeded/10 border border-exceeded/20 p-4">
+        <Card variant="alert">
           <h2 className="font-semibold text-exceeded mb-2">Notifications</h2>
           <div className="space-y-2">
             {notifications.map((notif) => (
@@ -163,16 +154,16 @@ function ParentDashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Children overview */}
       <div className="grid gap-4">
         {familyOverview?.children.map((child) => (
-          <div
+          <Card
             key={child.id}
             className={cn(
-              "rounded-xl bg-card p-4 border",
+              "border",
               child.isOverLimit ? "border-exceeded/50" : "border-transparent"
             )}
           >
@@ -202,35 +193,27 @@ function ParentDashboard() {
             </div>
 
             {child.weeklyLimitMinutes !== null && (
-              <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full transition-all",
-                    child.isOverLimit ? "bg-exceeded" : "bg-ok"
-                  )}
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      (child.weeklyMinutes / child.weeklyLimitMinutes) * 100
-                    )}%`,
-                  }}
-                />
-              </div>
+              <ProgressBar
+                value={child.weeklyMinutes}
+                max={child.weeklyLimitMinutes}
+                alertState={child.isOverLimit ? "exceeded" : "ok"}
+                className="mt-2"
+              />
             )}
 
             {child.isOverLimit && (
               <p className="text-sm text-exceeded mt-2">Over limit!</p>
             )}
-          </div>
+          </Card>
         ))}
 
         {(!familyOverview?.children || familyOverview.children.length === 0) && (
-          <div className="rounded-xl bg-card p-6 text-center">
+          <Card padding="lg" className="text-center">
             <p className="text-muted-foreground">No children in your family yet.</p>
             <p className="text-sm text-muted-foreground mt-1">
               Share your family code to invite them.
             </p>
-          </div>
+          </Card>
         )}
       </div>
     </div>
@@ -240,8 +223,8 @@ function ParentDashboard() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="rounded-xl bg-card p-6 h-48" />
-      <div className="rounded-xl bg-card p-4 h-32" />
+      <Card padding="lg" className="h-48" />
+      <Card className="h-32" />
     </div>
   );
 }
