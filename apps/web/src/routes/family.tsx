@@ -10,10 +10,13 @@ export const Route = createFileRoute("/family")({
 
 function Family() {
   const { isAuthenticated, user, family } = useAuthStore();
-  const [showCode, setShowCode] = useState(false);
+  const [showChildCode, setShowChildCode] = useState(false);
+  const [showParentCode, setShowParentCode] = useState(false);
+  const [confirmKick, setConfirmKick] = useState<string | null>(null);
+  const [confirmRegenerate, setConfirmRegenerate] = useState<"child" | "parent" | null>(null);
 
   const { data: members, isLoading } = trpc.family.members.useQuery();
-  const { data: inviteCode } = trpc.family.inviteCode.useQuery(undefined, {
+  const { data: inviteCodes, refetch: refetchCodes } = trpc.family.inviteCodes.useQuery(undefined, {
     enabled: user?.role === "parent",
   });
   const { data: notifPrefs } = trpc.notification.getPreferences.useQuery(undefined, {
@@ -21,9 +24,30 @@ function Family() {
   });
 
   const utils = trpc.useUtils();
+
   const updatePrefs = trpc.notification.updatePreferences.useMutation({
     onSuccess: () => {
       utils.notification.getPreferences.invalidate();
+    },
+  });
+
+  const toggleLockdown = trpc.family.toggleLockdown.useMutation({
+    onSuccess: () => {
+      refetchCodes();
+    },
+  });
+
+  const regenerateCode = trpc.family.regenerateInviteCode.useMutation({
+    onSuccess: () => {
+      refetchCodes();
+      setConfirmRegenerate(null);
+    },
+  });
+
+  const kickMember = trpc.family.kickMember.useMutation({
+    onSuccess: () => {
+      utils.family.members.invalidate();
+      setConfirmKick(null);
     },
   });
 
@@ -48,35 +72,159 @@ function Family() {
         <p className="text-lg">{family?.name}</p>
       </div>
 
-      {/* Invite code */}
-      <div className="rounded-xl bg-card p-4">
-        <h2 className="font-semibold mb-2">Invite Code</h2>
-        <p className="text-sm text-muted-foreground mb-3">
-          Share this code with family members to let them join
-        </p>
-
-        {showCode ? (
-          <div className="flex items-center gap-4">
-            <p className="text-3xl font-mono font-bold tracking-wider flex-1">
-              {inviteCode}
-            </p>
+      {/* Lockdown toggle */}
+      {inviteCodes && (
+        <div className="rounded-xl bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold">Family Lockdown</h2>
+              <p className="text-sm text-muted-foreground">
+                {inviteCodes.isLocked
+                  ? "New members cannot join"
+                  : "New members can join with invite codes"}
+              </p>
+            </div>
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(inviteCode ?? "");
-              }}
-              className="rounded-lg bg-muted px-4 py-2 text-sm hover:bg-muted/80"
+              onClick={() => toggleLockdown.mutate({ locked: !inviteCodes.isLocked })}
+              disabled={toggleLockdown.isPending}
+              className={cn(
+                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                inviteCodes.isLocked ? "bg-exceeded" : "bg-muted"
+              )}
             >
-              Copy
+              <span
+                className={cn(
+                  "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                  inviteCodes.isLocked ? "translate-x-6" : "translate-x-1"
+                )}
+              />
             </button>
           </div>
-        ) : (
-          <button
-            onClick={() => setShowCode(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-          >
-            Show Code
-          </button>
-        )}
+        </div>
+      )}
+
+      {/* Invite codes */}
+      <div className="rounded-xl bg-card p-4 space-y-4">
+        <h2 className="font-semibold">Invite Codes</h2>
+        <p className="text-sm text-muted-foreground">
+          Share these codes with family members to let them join
+        </p>
+
+        {/* Child invite code */}
+        <div className="rounded-lg bg-muted p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Child Invite Code</p>
+            {confirmRegenerate === "child" ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => regenerateCode.mutate({ codeType: "child" })}
+                  disabled={regenerateCode.isPending}
+                  className="text-xs text-exceeded hover:underline"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setConfirmRegenerate(null)}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmRegenerate("child")}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Regenerate
+              </button>
+            )}
+          </div>
+          {showChildCode ? (
+            <div className="flex items-center gap-4">
+              <p className="text-2xl font-mono font-bold tracking-wider flex-1">
+                {inviteCodes?.childCode}
+              </p>
+              <button
+                onClick={() => navigator.clipboard.writeText(inviteCodes?.childCode ?? "")}
+                className="rounded-lg bg-background px-3 py-1 text-sm hover:bg-background/80"
+              >
+                Copy
+              </button>
+              <button
+                onClick={() => setShowChildCode(false)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Hide
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowChildCode(true)}
+              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+            >
+              Show Code
+            </button>
+          )}
+          <p className="text-xs text-muted-foreground mt-2">Share with your kids</p>
+        </div>
+
+        {/* Parent invite code */}
+        <div className="rounded-lg bg-muted p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Parent Invite Code</p>
+            {confirmRegenerate === "parent" ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => regenerateCode.mutate({ codeType: "parent" })}
+                  disabled={regenerateCode.isPending}
+                  className="text-xs text-exceeded hover:underline"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setConfirmRegenerate(null)}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmRegenerate("parent")}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Regenerate
+              </button>
+            )}
+          </div>
+          {showParentCode ? (
+            <div className="flex items-center gap-4">
+              <p className="text-2xl font-mono font-bold tracking-wider flex-1">
+                {inviteCodes?.parentCode}
+              </p>
+              <button
+                onClick={() => navigator.clipboard.writeText(inviteCodes?.parentCode ?? "")}
+                className="rounded-lg bg-background px-3 py-1 text-sm hover:bg-background/80"
+              >
+                Copy
+              </button>
+              <button
+                onClick={() => setShowParentCode(false)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Hide
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowParentCode(true)}
+              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+            >
+              Show Code
+            </button>
+          )}
+          <p className="text-xs text-muted-foreground mt-2">Share with other parents only</p>
+        </div>
       </div>
 
       {/* Members list */}
@@ -124,6 +272,30 @@ function Family() {
                       className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
                     >
                       <p className="font-medium">{child.name}</p>
+                      {confirmKick === child.id ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => kickMember.mutate({ userId: child.id })}
+                            disabled={kickMember.isPending}
+                            className="text-sm text-exceeded hover:underline"
+                          >
+                            Confirm Remove
+                          </button>
+                          <button
+                            onClick={() => setConfirmKick(null)}
+                            className="text-sm text-muted-foreground hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmKick(child.id)}
+                          className="text-sm text-muted-foreground hover:text-exceeded"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

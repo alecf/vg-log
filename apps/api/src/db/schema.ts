@@ -4,7 +4,9 @@ import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 export const families = sqliteTable("families", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  inviteCode: text("invite_code").notNull().unique(),
+  childInviteCode: text("child_invite_code").notNull().unique(),
+  parentInviteCode: text("parent_invite_code").notNull().unique(),
+  isLocked: integer("is_locked", { mode: "boolean" }).notNull().default(false),
   timezone: text("timezone").notNull().default("America/Los_Angeles"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });

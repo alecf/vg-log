@@ -18,16 +18,20 @@ interface AuthState {
   user: AuthUser | null;
   family: AuthFamily | null;
   isAuthenticated: boolean;
+  usedInviteCodes: string[];
   login: (user: AuthUser, family: AuthFamily) => void;
   logout: () => void;
+  markCodeAsUsed: (code: string) => void;
+  isCodeUsed: (code: string) => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       family: null,
       isAuthenticated: false,
+      usedInviteCodes: [],
       login: (user, family) =>
         set({
           user,
@@ -40,6 +44,13 @@ export const useAuthStore = create<AuthState>()(
           family: null,
           isAuthenticated: false,
         }),
+      markCodeAsUsed: (code) =>
+        set((state) => ({
+          usedInviteCodes: state.usedInviteCodes.includes(code.toUpperCase())
+            ? state.usedInviteCodes
+            : [...state.usedInviteCodes, code.toUpperCase()],
+        })),
+      isCodeUsed: (code) => get().usedInviteCodes.includes(code.toUpperCase()),
     }),
     {
       name: "vg-log-auth",

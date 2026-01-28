@@ -82,3 +82,16 @@ export const calendarQuerySchema = z.object({
   year: z.number().int().min(2020).max(2100),
   month: z.number().int().min(1).max(12),
 });
+
+// Family security schemas
+export const regenerateInviteCodeSchema = z.object({
+  codeType: z.enum(["child", "parent"]),
+});
+
+export const kickUserSchema = z.object({
+  userId: z.string().uuid(),
+});
+
+export const toggleLockdownSchema = z.object({
+  locked: z.boolean(),
+});

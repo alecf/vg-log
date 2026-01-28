@@ -1,10 +1,16 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../lib/trpc.js";
+import { router, publicProcedure, protectedProcedure, parentProcedure } from "../lib/trpc.js";
 import { families, users, alertSettings, notificationPreferences } from "../db/schema.js";
 import { generateId, generateInviteCode } from "../lib/utils.js";
-import { createFamilySchema, joinFamilySchema } from "@vg-log/shared";
+import {
+  createFamilySchema,
+  joinFamilySchema,
+  regenerateInviteCodeSchema,
+  kickUserSchema,
+  toggleLockdownSchema,
+} from "@vg-log/shared";
 
 export const familyRouter = router({
   // Create a new family (parent only)
@@ -19,14 +25,17 @@ export const familyRouter = router({
     .mutation(async ({ ctx, input }) => {
       const familyId = generateId();
       const oderId = generateId();
-      const inviteCode = generateInviteCode();
+      const childInviteCode = generateInviteCode();
+      const parentInviteCode = generateInviteCode();
       const now = new Date();
 
       // Create family
       await ctx.db.insert(families).values({
         id: familyId,
         name: input.name,
-        inviteCode,
+        childInviteCode,
+        parentInviteCode,
+        isLocked: false,
         timezone: input.timezone,
         createdAt: now,
       });
@@ -54,21 +63,53 @@ export const familyRouter = router({
       return {
         familyId,
         oderId,
-        inviteCode,
+        childInviteCode,
+        parentInviteCode,
       };
     }),
 
   // Join an existing family
   join: publicProcedure.input(joinFamilySchema).mutation(async ({ ctx, input }) => {
-    // Find family by invite code
+    const upperCode = input.inviteCode.toUpperCase();
+
+    // Find family by either invite code
     const family = await ctx.db.query.families.findFirst({
-      where: eq(families.inviteCode, input.inviteCode.toUpperCase()),
+      where: or(
+        eq(families.childInviteCode, upperCode),
+        eq(families.parentInviteCode, upperCode)
+      ),
     });
 
     if (!family) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "Invalid invite code",
+      });
+    }
+
+    // Check if family is locked
+    if (family.isLocked) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "This family is not accepting new members",
+      });
+    }
+
+    // Determine which code type was used
+    const isChildCode = family.childInviteCode === upperCode;
+    const isParentCode = family.parentInviteCode === upperCode;
+
+    // Validate that the requested role matches the code type
+    if (isChildCode && input.role !== "child") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This invite code is for children only",
+      });
+    }
+    if (isParentCode && input.role !== "parent") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This invite code is for parents only",
       });
     }
 
@@ -135,14 +176,78 @@ export const familyRouter = router({
     }));
   }),
 
-  // Get invite code (parents only can see this)
-  inviteCode: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "parent") {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Only parents can view the invite code",
-      });
-    }
-    return ctx.family.inviteCode;
+  // Get invite codes (parents only)
+  inviteCodes: parentProcedure.query(async ({ ctx }) => {
+    return {
+      childCode: ctx.family.childInviteCode,
+      parentCode: ctx.family.parentInviteCode,
+      isLocked: ctx.family.isLocked,
+    };
   }),
+
+  // Toggle family lockdown (parents only)
+  toggleLockdown: parentProcedure
+    .input(toggleLockdownSchema)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(families)
+        .set({ isLocked: input.locked })
+        .where(eq(families.id, ctx.family.id));
+
+      return { isLocked: input.locked };
+    }),
+
+  // Regenerate an invite code (parents only)
+  regenerateInviteCode: parentProcedure
+    .input(regenerateInviteCodeSchema)
+    .mutation(async ({ ctx, input }) => {
+      const newCode = generateInviteCode();
+
+      if (input.codeType === "child") {
+        await ctx.db
+          .update(families)
+          .set({ childInviteCode: newCode })
+          .where(eq(families.id, ctx.family.id));
+      } else {
+        await ctx.db
+          .update(families)
+          .set({ parentInviteCode: newCode })
+          .where(eq(families.id, ctx.family.id));
+      }
+
+      return { newCode, codeType: input.codeType };
+    }),
+
+  // Kick a child from the family (parents only)
+  kickMember: parentProcedure
+    .input(kickUserSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Find the user to kick
+      const userToKick = await ctx.db.query.users.findFirst({
+        where: and(
+          eq(users.id, input.userId),
+          eq(users.familyId, ctx.family.id)
+        ),
+      });
+
+      if (!userToKick) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found in this family",
+        });
+      }
+
+      // Only allow kicking children
+      if (userToKick.role !== "child") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only children can be removed from the family",
+        });
+      }
+
+      // Delete the user (cascades to sessions, limits, alerts)
+      await ctx.db.delete(users).where(eq(users.id, input.userId));
+
+      return { success: true };
+    }),
 });

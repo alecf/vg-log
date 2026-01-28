@@ -102,11 +102,17 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
   const [familyName, setFamilyName] = useState("");
   const [parentName, setParentName] = useState("");
   const [pin, setPin] = useState("");
-  const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [createdCodes, setCreatedCodes] = useState<{
+    childCode: string;
+    parentCode: string;
+  } | null>(null);
 
   const createFamily = trpc.family.create.useMutation({
     onSuccess: (data) => {
-      setCreatedCode(data.inviteCode);
+      setCreatedCodes({
+        childCode: data.childInviteCode,
+        parentCode: data.parentInviteCode,
+      });
     },
   });
 
@@ -147,16 +153,27 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
     }
   };
 
-  if (createdCode) {
+  if (createdCodes) {
     return (
       <div className="space-y-4 rounded-xl bg-card p-6">
         <h2 className="text-xl font-semibold">Family Created!</h2>
-        <div className="rounded-lg bg-muted p-4 text-center">
-          <p className="text-sm text-muted-foreground mb-2">Your family code is</p>
-          <p className="text-3xl font-mono font-bold tracking-wider">{createdCode}</p>
+
+        <div className="space-y-3">
+          <div className="rounded-lg bg-muted p-4">
+            <p className="text-sm text-muted-foreground mb-1">Child Invite Code</p>
+            <p className="text-2xl font-mono font-bold tracking-wider">{createdCodes.childCode}</p>
+            <p className="text-xs text-muted-foreground mt-1">Share with your kids</p>
+          </div>
+
+          <div className="rounded-lg bg-muted p-4">
+            <p className="text-sm text-muted-foreground mb-1">Parent Invite Code</p>
+            <p className="text-2xl font-mono font-bold tracking-wider">{createdCodes.parentCode}</p>
+            <p className="text-xs text-muted-foreground mt-1">Share with other parents only</p>
+          </div>
         </div>
+
         <p className="text-sm text-muted-foreground">
-          Share this code with your family members so they can join.
+          You can view these codes anytime in Family Settings.
         </p>
         <button
           onClick={handleContinue}
@@ -239,12 +256,15 @@ function JoinFamilyStep({
   onBack: () => void;
   onCodeValid: () => void;
 }) {
+  const { isCodeUsed } = useAuthStore();
   const [error, setError] = useState("");
 
   const checkCode = trpc.auth.getFamilyMembers.useQuery(
     { inviteCode },
     { enabled: inviteCode.length === 6 }
   );
+
+  const codeAlreadyUsed = inviteCode.length === 6 && isCodeUsed(inviteCode);
 
   const handleSubmit = () => {
     if (checkCode.data) {
@@ -279,6 +299,12 @@ function JoinFamilyStep({
         <p className="text-sm text-ok">Found: {checkCode.data.familyName}</p>
       )}
 
+      {codeAlreadyUsed && (
+        <p className="text-sm text-warning">
+          You've already used this code on this device. Select your name below to log in.
+        </p>
+      )}
+
       {error && <p className="text-sm text-exceeded">{error}</p>}
 
       <button
@@ -301,23 +327,47 @@ function SelectMemberStep({
   onBack: () => void;
   onSelectMember: (member: { id: string; name: string; role: string }) => void;
 }) {
+  const { isCodeUsed, markCodeAsUsed } = useAuthStore();
   const { data } = trpc.auth.getFamilyMembers.useQuery({ inviteCode });
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPin, setNewPin] = useState("");
-  const [newRole, setNewRole] = useState<"child" | "parent">("child");
+
+  // Determine role from code type
+  const expectedRole = data?.codeType === "parent" ? "parent" : "child";
+  const codeAlreadyUsed = isCodeUsed(inviteCode);
 
   const joinFamily = trpc.family.join.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (result) => {
+      markCodeAsUsed(inviteCode);
       onSelectMember({
-        id: data.oderId,
+        id: result.oderId,
         name: newName,
-        role: newRole,
+        role: expectedRole,
       });
     },
   });
 
   if (isAddingNew) {
+    // Check if this code has already been used for a new account
+    if (codeAlreadyUsed) {
+      return (
+        <div className="space-y-4 rounded-xl bg-card p-6">
+          <button
+            onClick={() => setIsAddingNew(false)}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            &larr; Back
+          </button>
+          <h2 className="text-xl font-semibold">Already Used</h2>
+          <p className="text-muted-foreground">
+            This invite code has already been used to create an account on this device.
+            Please select your existing account or ask a parent for a new code.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4 rounded-xl bg-card p-6">
         <button
@@ -339,32 +389,10 @@ function SelectMemberStep({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">I am a...</label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setNewRole("child")}
-              className={cn(
-                "rounded-lg border p-3 text-center",
-                newRole === "child"
-                  ? "border-primary bg-primary/10"
-                  : "border-border"
-              )}
-            >
-              Kid
-            </button>
-            <button
-              onClick={() => setNewRole("parent")}
-              className={cn(
-                "rounded-lg border p-3 text-center",
-                newRole === "parent"
-                  ? "border-primary bg-primary/10"
-                  : "border-border"
-              )}
-            >
-              Parent
-            </button>
-          </div>
+        <div className="rounded-lg bg-muted/50 p-3">
+          <p className="text-sm text-muted-foreground">
+            You're joining as: <span className="font-medium capitalize">{expectedRole}</span>
+          </p>
         </div>
 
         <div>
@@ -389,7 +417,7 @@ function SelectMemberStep({
             joinFamily.mutate({
               inviteCode,
               name: newName,
-              role: newRole,
+              role: expectedRole,
               pin: newPin,
             })
           }
