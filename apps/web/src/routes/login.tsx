@@ -327,7 +327,8 @@ function SelectMemberStep({
   onBack: () => void;
   onSelectMember: (member: { id: string; name: string; role: string }) => void;
 }) {
-  const { isCodeUsed, markCodeAsUsed } = useAuthStore();
+  const navigate = useNavigate();
+  const { isCodeUsed, markCodeAsUsed, login } = useAuthStore();
   const { data } = trpc.auth.getFamilyMembers.useQuery({ inviteCode });
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newName, setNewName] = useState("");
@@ -337,14 +338,34 @@ function SelectMemberStep({
   const expectedRole = data?.codeType === "parent" ? "parent" : "child";
   const codeAlreadyUsed = isCodeUsed(inviteCode);
 
+  // Filter members to only show those matching the code type
+  const filteredMembers = data?.members.filter((m) => m.role === expectedRole) ?? [];
+
+  // Login mutation for after joining
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: (data) => {
+      login(
+        {
+          id: data.user.id,
+          name: data.user.name,
+          role: data.user.role,
+          familyId: data.user.familyId,
+        },
+        {
+          id: data.family.id,
+          name: data.family.name,
+          timezone: data.family.timezone,
+        }
+      );
+      navigate({ to: "/" });
+    },
+  });
+
   const joinFamily = trpc.family.join.useMutation({
     onSuccess: (result) => {
       markCodeAsUsed(inviteCode);
-      onSelectMember({
-        id: result.oderId,
-        name: newName,
-        role: expectedRole,
-      });
+      // Log in directly with the PIN they just set
+      loginMutation.mutate({ oderId: result.oderId, pin: newPin });
     },
   });
 
@@ -396,7 +417,8 @@ function SelectMemberStep({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">4-Digit PIN</label>
+          <label className="block text-sm font-medium mb-1">Create a 4-Digit PIN</label>
+          <p className="text-xs text-muted-foreground mb-2">You'll use this to log in</p>
           <input
             type="password"
             inputMode="numeric"
@@ -408,8 +430,10 @@ function SelectMemberStep({
           />
         </div>
 
-        {joinFamily.error && (
-          <p className="text-sm text-exceeded">{joinFamily.error.message}</p>
+        {(joinFamily.error || loginMutation.error) && (
+          <p className="text-sm text-exceeded">
+            {joinFamily.error?.message || loginMutation.error?.message}
+          </p>
         )}
 
         <button
@@ -421,10 +445,10 @@ function SelectMemberStep({
               pin: newPin,
             })
           }
-          disabled={!newName || newPin.length !== 4 || joinFamily.isPending}
+          disabled={!newName || newPin.length !== 4 || joinFamily.isPending || loginMutation.isPending}
           className="w-full rounded-lg bg-primary p-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {joinFamily.isPending ? "Joining..." : "Join Family"}
+          {joinFamily.isPending || loginMutation.isPending ? "Joining..." : "Join Family"}
         </button>
       </div>
     );
@@ -438,18 +462,19 @@ function SelectMemberStep({
       <h2 className="text-xl font-semibold">Who are you?</h2>
       <p className="text-sm text-muted-foreground">{data?.familyName}</p>
 
-      <div className="space-y-2">
-        {data?.members.map((member) => (
-          <button
-            key={member.id}
-            onClick={() => onSelectMember(member)}
-            className="w-full rounded-lg bg-muted border border-border p-4 text-left hover:bg-muted/80 transition"
-          >
-            <p className="font-medium">{member.name}</p>
-            <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
-          </button>
-        ))}
-      </div>
+      {filteredMembers.length > 0 && (
+        <div className="space-y-2">
+          {filteredMembers.map((member) => (
+            <button
+              key={member.id}
+              onClick={() => onSelectMember(member)}
+              className="w-full rounded-lg bg-muted border border-border p-4 text-left hover:bg-muted/80 transition"
+            >
+              <p className="font-medium">{member.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
 
       <button
         onClick={() => setIsAddingNew(true)}
