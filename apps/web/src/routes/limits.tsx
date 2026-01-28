@@ -29,6 +29,24 @@ function LimitsContent() {
   const [hours, setHours] = useState(7);
   const [minutes, setMinutes] = useState(0);
 
+  // All hooks must be called unconditionally before any early returns
+  const { data: childLimits } = trpc.limit.get.useQuery(
+    { userId: selectedChildId ?? undefined },
+    { enabled: !!selectedChildId }
+  );
+
+  const { data: childStats } = trpc.stats.overview.useQuery(
+    { userId: selectedChildId ?? undefined },
+    { enabled: !!selectedChildId }
+  );
+
+  const setLimit = trpc.limit.set.useMutation({
+    onSuccess: () => {
+      utils.limit.get.invalidate();
+      utils.stats.familyOverview.invalidate();
+    },
+  });
+
   const children = members?.filter((m) => m.role === "child") ?? [];
 
   if (membersLoading) {
@@ -58,23 +76,6 @@ function LimitsContent() {
       </div>
     );
   }
-
-  const { data: childLimits } = trpc.limit.get.useQuery(
-    { userId: selectedChildId ?? undefined },
-    { enabled: !!selectedChildId }
-  );
-
-  const { data: childStats } = trpc.stats.overview.useQuery(
-    { userId: selectedChildId ?? undefined },
-    { enabled: !!selectedChildId }
-  );
-
-  const setLimit = trpc.limit.set.useMutation({
-    onSuccess: () => {
-      utils.limit.get.invalidate();
-      utils.stats.familyOverview.invalidate();
-    },
-  });
 
   const selectedChild = children.find((c) => c.id === selectedChildId);
   const currentWeeklyLimit = childLimits?.find((l) => l.limitType === "weekly");

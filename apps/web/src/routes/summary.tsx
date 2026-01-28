@@ -9,12 +9,32 @@ export const Route = createFileRoute("/summary")({
 });
 
 function Summary() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
-  const { data: summary, isLoading } = trpc.stats.weekly.useQuery({
-    weekOffset,
+  // For parents, fetch family members to select a child
+  const { data: members } = trpc.family.members.useQuery(undefined, {
+    enabled: user?.role === "parent",
   });
+
+  const children = members?.filter((m) => m.role === "child") ?? [];
+
+  // Determine which user's data to show
+  const targetUserId =
+    user?.role === "child"
+      ? undefined
+      : selectedChildId ?? children[0]?.id;
+
+  const { data: summary, isLoading } = trpc.stats.weekly.useQuery(
+    {
+      weekOffset,
+      userId: targetUserId,
+    },
+    {
+      enabled: user?.role === "child" || !!targetUserId,
+    }
+  );
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -33,8 +53,40 @@ function Summary() {
     ? Math.max(...summary.dailyBreakdown.map((d) => d.minutes), 60)
     : 60;
 
+  const selectedChild = children.find((c) => c.id === (selectedChildId ?? children[0]?.id));
+
   return (
     <div className="space-y-6">
+      {/* Child selector for parents */}
+      {user?.role === "parent" && children.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {children.map((child) => (
+            <button
+              key={child.id}
+              onClick={() => setSelectedChildId(child.id)}
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition",
+                (selectedChildId ?? children[0]?.id) === child.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-muted"
+              )}
+            >
+              {child.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* No children message for parents */}
+      {user?.role === "parent" && children.length === 0 && (
+        <div className="rounded-xl bg-card p-6 text-center">
+          <p className="text-muted-foreground">No children in your family yet.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Share your family code to invite them.
+          </p>
+        </div>
+      )}
+
       {/* Week navigation */}
       <div className="flex items-center justify-between">
         <button
@@ -45,6 +97,7 @@ function Summary() {
         </button>
         <div className="text-center">
           <h1 className="text-xl font-semibold">
+            {selectedChild ? `${selectedChild.name}'s ` : ""}
             {weekOffset === 0
               ? "This Week"
               : weekOffset === -1

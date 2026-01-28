@@ -9,15 +9,38 @@ export const Route = createFileRoute("/calendar")({
 });
 
 function Calendar() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
-  const { data: calendar, isLoading } = trpc.stats.calendar.useQuery({
-    year,
-    month,
+  // For parents, fetch family members to select a child
+  const { data: members } = trpc.family.members.useQuery(undefined, {
+    enabled: user?.role === "parent",
   });
+
+  const children = members?.filter((m) => m.role === "child") ?? [];
+
+  // Determine which user's data to show
+  // For children: show their own data
+  // For parents: show selected child's data (or first child if none selected)
+  const targetUserId =
+    user?.role === "child"
+      ? undefined // API will use logged-in user
+      : selectedChildId ?? children[0]?.id;
+
+  const { data: calendar, isLoading } = trpc.stats.calendar.useQuery(
+    {
+      year,
+      month,
+      userId: targetUserId,
+    },
+    {
+      // Only fetch when we have a target user (always true for children, need child selected for parents)
+      enabled: user?.role === "child" || !!targetUserId,
+    }
+  );
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -92,9 +115,40 @@ function Calendar() {
   };
 
   const selectedDayData = selectedDay ? getDayData(selectedDay) : null;
+  const selectedChild = children.find((c) => c.id === (selectedChildId ?? children[0]?.id));
 
   return (
     <div className="space-y-6">
+      {/* Child selector for parents */}
+      {user?.role === "parent" && children.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {children.map((child) => (
+            <button
+              key={child.id}
+              onClick={() => setSelectedChildId(child.id)}
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition",
+                (selectedChildId ?? children[0]?.id) === child.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-muted"
+              )}
+            >
+              {child.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* No children message for parents */}
+      {user?.role === "parent" && children.length === 0 && (
+        <div className="rounded-xl bg-card p-6 text-center">
+          <p className="text-muted-foreground">No children in your family yet.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Share your family code to invite them.
+          </p>
+        </div>
+      )}
+
       {/* Month navigation */}
       <div className="flex items-center justify-between">
         <button
@@ -104,6 +158,7 @@ function Calendar() {
           &larr;
         </button>
         <h1 className="text-xl font-semibold">
+          {selectedChild ? `${selectedChild.name}'s ` : ""}
           {monthNames[month - 1]} {year}
         </h1>
         <button
