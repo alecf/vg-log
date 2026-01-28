@@ -9,6 +9,62 @@ Video game time tracking app for families. Parents set limits, kids log sessions
 - **Web** (`apps/web`): React, TanStack Router, tRPC client, Tailwind CSS, Zustand
 - **Shared** (`packages/shared`): Types and schemas shared between API and web
 
+## Code Quality Principles
+
+### Keep It Simple
+
+- **YAGNI** (You Aren't Gonna Need It) - Don't build features or abstractions until they're actually needed
+- **Prefer clarity over cleverness** - Code is read far more than it's written
+- **Avoid premature optimization** - Make it work, make it right, then make it fast (only if needed)
+
+### SOLID Principles
+
+- **Single Responsibility** - Each function/module should do one thing well
+- **Open/Closed** - Open for extension, closed for modification (use composition)
+- **Liskov Substitution** - Subtypes must be substitutable for their base types
+- **Interface Segregation** - Prefer small, focused interfaces over large ones
+- **Dependency Inversion** - Depend on abstractions, not concretions (use dependency injection for testability)
+
+### DRY (Don't Repeat Yourself)
+
+- Extract repeated logic into shared functions
+- But don't over-abstract - duplication is better than the wrong abstraction
+- Rule of three: consider extracting after the third repetition
+
+### Naming
+
+- Use descriptive, intention-revealing names
+- Functions should be verbs (`getUserById`, `calculateTotal`, `validateInput`)
+- Booleans should read as questions (`isActive`, `hasPermission`, `canEdit`)
+- Avoid abbreviations except for well-known ones (`id`, `url`, `api`)
+
+### Functions
+
+- Keep functions small and focused (ideally < 20 lines)
+- Limit parameters (ideally ≤ 3, use objects for more)
+- Avoid side effects where possible - prefer pure functions
+- Return early to avoid deep nesting
+
+### Error Handling
+
+- Handle errors at the appropriate level - don't swallow them silently
+- Provide context in error messages
+- Use typed errors (like `TRPCError`) over generic throws
+- Validate inputs at system boundaries (API endpoints, form submissions)
+
+### TypeScript Specific
+
+- Use strict mode - leverage the type system fully
+- Prefer `interface` for object shapes, `type` for unions/intersections
+- Avoid `any` - use `unknown` and narrow with type guards
+- Use Zod for runtime validation that mirrors TypeScript types
+
+### Testing Mindset
+
+- Write code that's easy to test (pure functions, dependency injection)
+- Consider edge cases: empty arrays, null values, boundary conditions
+- If something is hard to test, it's often a sign the design could be improved
+
 ## Commands
 
 ```bash
