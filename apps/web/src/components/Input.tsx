@@ -17,8 +17,9 @@ const variantClasses: Record<InputVariant, string> = {
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, variant = "default", label, error, hint, id, ...props }, ref) => {
+  ({ className, variant = "default", label, error, hint, id, name, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
+    const inputName = name || inputId;
 
     return (
       <div className="w-full">
@@ -36,6 +37,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          name={inputName}
           className={cn(
             variantClasses[variant],
             error && "border-exceeded focus:ring-exceeded",

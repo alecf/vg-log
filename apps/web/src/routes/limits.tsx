@@ -175,24 +175,28 @@ function LimitsContent() {
                 )}
 
                 {/* Presets */}
-                <div className="grid grid-cols-4 gap-2">
-                  {presets.map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => {
-                        setHours(preset.hours);
-                        setMinutes(preset.minutes);
-                      }}
-                      className={cn(
-                        "rounded-lg p-2 text-sm border transition",
-                        hours === preset.hours && minutes === preset.minutes
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-muted-foreground"
-                      )}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-4 gap-2" role="group" aria-label="Preset time limits">
+                  {presets.map((preset) => {
+                    const isSelected = hours === preset.hours && minutes === preset.minutes;
+                    return (
+                      <button
+                        key={preset.label}
+                        onClick={() => {
+                          setHours(preset.hours);
+                          setMinutes(preset.minutes);
+                        }}
+                        aria-pressed={isSelected}
+                        className={cn(
+                          "rounded-lg p-2 text-sm border transition",
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-muted-foreground"
+                        )}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Custom input */}
@@ -201,16 +205,20 @@ function LimitsContent() {
                     variant="centered"
                     label="Hours"
                     type="number"
+                    name="limit-hours"
+                    autoComplete="off"
                     min={0}
                     max={168}
                     value={hours}
                     onChange={(e) => setHours(parseInt(e.target.value) || 0)}
                   />
-                  <span className="text-2xl text-muted-foreground mt-6">:</span>
+                  <span className="text-2xl text-muted-foreground mt-6" aria-hidden="true">:</span>
                   <Input
                     variant="centered"
                     label="Minutes"
                     type="number"
+                    name="limit-minutes"
+                    autoComplete="off"
                     min={0}
                     max={59}
                     value={minutes}
@@ -227,7 +235,7 @@ function LimitsContent() {
                   onClick={handleSetLimit}
                   disabled={setLimit.isPending || (hours === 0 && minutes === 0)}
                 >
-                  {setLimit.isPending ? "Saving..." : "Set Limit"}
+                  {setLimit.isPending ? "Saving…" : "Set Limit"}
                 </Button>
 
                 {setLimit.isSuccess && (

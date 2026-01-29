@@ -49,7 +49,13 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(
             <span>{rightLabel}</span>
           </div>
         )}
-        <div className={cn("progress-container", sizeClasses[size])}>
+        <div
+          className={cn("progress-container", sizeClasses[size])}
+          role="progressbar"
+          aria-valuenow={value}
+          aria-valuemin={0}
+          aria-valuemax={max}
+        >
           <div
             className={cn("progress-fill", colorClass)}
             style={{ width: `${percentage}%` }}

@@ -87,8 +87,8 @@ function Summary() {
 
       {/* Week navigation */}
       <div className="flex items-center justify-between">
-        <Button variant="secondary" size="sm" onClick={() => setWeekOffset(weekOffset - 1)}>
-          &larr; Previous
+        <Button variant="secondary" size="sm" onClick={() => setWeekOffset(weekOffset - 1)} aria-label="Previous week">
+          ← Previous
         </Button>
         <div className="text-center">
           <h1 className="text-xl font-semibold">
@@ -110,8 +110,9 @@ function Summary() {
           size="sm"
           onClick={() => setWeekOffset(Math.min(0, weekOffset + 1))}
           disabled={weekOffset >= 0}
+          aria-label="Next week"
         >
-          Next &rarr;
+          Next →
         </Button>
       </div>
 

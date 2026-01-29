@@ -78,14 +78,18 @@ function Family() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-semibold">Family Lockdown</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="font-semibold" id="lockdown-label">Family Lockdown</h2>
+              <p className="text-sm text-muted-foreground" id="lockdown-description">
                 {inviteCodes.isLocked
                   ? "New members cannot join"
                   : "New members can join with invite codes"}
               </p>
             </div>
             <button
+              role="switch"
+              aria-checked={inviteCodes.isLocked}
+              aria-labelledby="lockdown-label"
+              aria-describedby="lockdown-description"
               onClick={() => toggleLockdown.mutate({ locked: !inviteCodes.isLocked })}
               disabled={toggleLockdown.isPending}
               className={cn(
@@ -330,9 +334,12 @@ function Family() {
         {notifPrefs && (
           <div className="space-y-3">
             <label className="flex items-center justify-between rounded-lg bg-muted/50 p-3 cursor-pointer">
-              <span>Browser Notifications</span>
+              <span id="browser-notif-label">Browser Notifications</span>
               <input
                 type="checkbox"
+                id="browser-notifications"
+                name="browser-notifications"
+                aria-labelledby="browser-notif-label"
                 checked={notifPrefs.browserNotifications}
                 onChange={(e) =>
                   updatePrefs.mutate({
@@ -345,9 +352,12 @@ function Family() {
             </label>
 
             <label className="flex items-center justify-between rounded-lg bg-muted/50 p-3 cursor-pointer">
-              <span>In-App Banner</span>
+              <span id="inapp-banner-label">In-App Banner</span>
               <input
                 type="checkbox"
+                id="in-app-banner"
+                name="in-app-banner"
+                aria-labelledby="inapp-banner-label"
                 checked={notifPrefs.inAppBanner}
                 onChange={(e) =>
                   updatePrefs.mutate({
@@ -359,18 +369,23 @@ function Family() {
               />
             </label>
 
-            <label className="flex items-center justify-between rounded-lg bg-muted/50 p-3 cursor-pointer opacity-50">
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3 opacity-50">
               <div>
-                <span>Email Notifications</span>
-                <p className="text-xs text-muted-foreground">Coming soon</p>
+                <span id="email-notif-label">Email Notifications</span>
+                <p className="text-xs text-muted-foreground" id="email-notif-desc">Coming soon</p>
               </div>
               <input
                 type="checkbox"
+                id="email-notifications"
+                name="email-notifications"
+                aria-labelledby="email-notif-label"
+                aria-describedby="email-notif-desc"
+                aria-disabled="true"
                 checked={false}
                 disabled
                 className="w-5 h-5 accent-primary"
               />
-            </label>
+            </div>
           </div>
         )}
       </Card>

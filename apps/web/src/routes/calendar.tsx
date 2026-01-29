@@ -149,15 +149,15 @@ function Calendar() {
 
       {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <Button variant="secondary" size="sm" onClick={goToPrevMonth}>
-          &larr;
+        <Button variant="secondary" size="sm" onClick={goToPrevMonth} aria-label="Previous month">
+          ←
         </Button>
         <h1 className="text-xl font-semibold">
           {selectedChild ? `${selectedChild.name}'s ` : ""}
           {monthNames[month - 1]} {year}
         </h1>
-        <Button variant="secondary" size="sm" onClick={goToNextMonth}>
-          &rarr;
+        <Button variant="secondary" size="sm" onClick={goToNextMonth} aria-label="Next month">
+          →
         </Button>
       </div>
 
@@ -199,21 +199,29 @@ function Calendar() {
             <div className="space-y-1">
               {weeks.map((week, weekIndex) => (
                 <div key={weekIndex} className="grid grid-cols-7 gap-1">
-                  {week.map((day, dayIndex) => (
-                    <button
-                      key={dayIndex}
-                      onClick={() => day && setSelectedDay(day)}
-                      disabled={!day}
-                      className={cn(
-                        "aspect-square rounded-lg flex items-center justify-center text-sm transition-all",
-                        day ? getDayColor(day) : "bg-transparent",
-                        day && "hover:ring-2 hover:ring-primary",
-                        selectedDay === day && "ring-2 ring-primary"
-                      )}
-                    >
-                      {day}
-                    </button>
-                  ))}
+                  {week.map((day, dayIndex) => {
+                    const dayData = day ? getDayData(day) : null;
+                    const ariaLabel = day
+                      ? `${monthNames[month - 1]} ${day}, ${year}${dayData?.totalMinutes ? `, ${dayData.totalMinutes} minutes played` : ", no gaming"}`
+                      : undefined;
+                    return (
+                      <button
+                        key={dayIndex}
+                        onClick={() => day && setSelectedDay(day)}
+                        disabled={!day}
+                        aria-label={ariaLabel}
+                        aria-pressed={selectedDay === day}
+                        className={cn(
+                          "aspect-square rounded-lg flex items-center justify-center text-sm transition-all",
+                          day ? getDayColor(day) : "bg-transparent",
+                          day && "hover:ring-2 hover:ring-primary",
+                          selectedDay === day && "ring-2 ring-primary"
+                        )}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
                 </div>
               ))}
             </div>

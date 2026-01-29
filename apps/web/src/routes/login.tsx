@@ -171,7 +171,7 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
           You can view these codes anytime in Family Settings.
         </p>
         <Button fullWidth onClick={handleContinue} disabled={loginMutation.isPending}>
-          {loginMutation.isPending ? "Logging in..." : "Continue to Dashboard"}
+          {loginMutation.isPending ? "Logging in…" : "Continue to Dashboard"}
         </Button>
       </Card>
     );
@@ -179,14 +179,16 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
 
   return (
     <Card padding="lg" className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        &larr; Back
+      <Button variant="ghost" size="sm" onClick={onBack} aria-label="Go back">
+        ← Back
       </Button>
       <h2 className="text-xl font-semibold">Create a Family</h2>
 
       <Input
         label="Family Name"
         type="text"
+        name="family-name"
+        autoComplete="organization"
         value={familyName}
         onChange={(e) => setFamilyName(e.target.value)}
         placeholder="The Smith Family"
@@ -195,6 +197,8 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
       <Input
         label="Your Name"
         type="text"
+        name="parent-name"
+        autoComplete="name"
         value={parentName}
         onChange={(e) => setParentName(e.target.value)}
         placeholder="Mom / Dad"
@@ -204,6 +208,8 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
         label="4-Digit PIN"
         variant="pin"
         type="password"
+        name="pin"
+        autoComplete="new-password"
         inputMode="numeric"
         maxLength={4}
         value={pin}
@@ -220,7 +226,7 @@ function CreateFamilyStep({ onBack }: { onBack: () => void }) {
         onClick={handleCreate}
         disabled={!familyName || !parentName || pin.length !== 4 || createFamily.isPending}
       >
-        {createFamily.isPending ? "Creating..." : "Create Family"}
+        {createFamily.isPending ? "Creating…" : "Create Family"}
       </Button>
     </Card>
   );
@@ -257,14 +263,17 @@ function JoinFamilyStep({
 
   return (
     <Card padding="lg" className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        &larr; Back
+      <Button variant="ghost" size="sm" onClick={onBack} aria-label="Go back">
+        ← Back
       </Button>
       <h2 className="text-xl font-semibold">Join a Family</h2>
 
       <Input
         label="Invite Code"
         type="text"
+        name="invite-code"
+        autoComplete="off"
+        spellCheck={false}
         value={inviteCode}
         onChange={(e) => {
           setInviteCode(e.target.value.toUpperCase().slice(0, 6));
@@ -354,8 +363,8 @@ function SelectMemberStep({
     if (codeAlreadyUsed) {
       return (
         <Card padding="lg" className="space-y-4">
-          <Button variant="ghost" size="sm" onClick={() => setIsAddingNew(false)}>
-            &larr; Back
+          <Button variant="ghost" size="sm" onClick={() => setIsAddingNew(false)} aria-label="Go back">
+            ← Back
           </Button>
           <h2 className="text-xl font-semibold">Already Used</h2>
           <p className="text-muted-foreground">
@@ -368,14 +377,16 @@ function SelectMemberStep({
 
     return (
       <Card padding="lg" className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => setIsAddingNew(false)}>
-          &larr; Back
+        <Button variant="ghost" size="sm" onClick={() => setIsAddingNew(false)} aria-label="Go back">
+          ← Back
         </Button>
         <h2 className="text-xl font-semibold">Join {data?.familyName}</h2>
 
         <Input
           label="Your Name"
           type="text"
+          name="member-name"
+          autoComplete="name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Your name"
@@ -392,6 +403,8 @@ function SelectMemberStep({
           hint="You'll use this to log in"
           variant="pin"
           type="password"
+          name="new-pin"
+          autoComplete="new-password"
           inputMode="numeric"
           maxLength={4}
           value={newPin}
@@ -417,7 +430,7 @@ function SelectMemberStep({
           }
           disabled={!newName || newPin.length !== 4 || joinFamily.isPending || loginMutation.isPending}
         >
-          {joinFamily.isPending || loginMutation.isPending ? "Joining..." : "Join Family"}
+          {joinFamily.isPending || loginMutation.isPending ? "Joining…" : "Join Family"}
         </Button>
       </Card>
     );
@@ -425,8 +438,8 @@ function SelectMemberStep({
 
   return (
     <Card padding="lg" className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        &larr; Back
+      <Button variant="ghost" size="sm" onClick={onBack} aria-label="Go back">
+        ← Back
       </Button>
       <h2 className="text-xl font-semibold">Who are you?</h2>
       <p className="text-sm text-muted-foreground">{data?.familyName}</p>
@@ -487,8 +500,8 @@ function EnterPinStep({
 
   return (
     <Card padding="lg" className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        &larr; Back
+      <Button variant="ghost" size="sm" onClick={onBack} aria-label="Go back">
+        ← Back
       </Button>
       <h2 className="text-xl font-semibold">Hi, {member.name}!</h2>
       <p className="text-sm text-muted-foreground">Enter your PIN to continue</p>
@@ -496,6 +509,8 @@ function EnterPinStep({
       <Input
         variant="pin"
         type="password"
+        name="login-pin"
+        autoComplete="current-password"
         inputMode="numeric"
         maxLength={4}
         value={pin}
@@ -514,7 +529,7 @@ function EnterPinStep({
         onClick={() => loginMutation.mutate({ oderId: member.id, pin })}
         disabled={pin.length !== 4 || loginMutation.isPending}
       >
-        {loginMutation.isPending ? "Logging in..." : "Login"}
+        {loginMutation.isPending ? "Logging in…" : "Login"}
       </Button>
     </Card>
   );

@@ -276,6 +276,7 @@ function Play() {
             startSession.mutate({});
           }}
           disabled={startSession.isPending}
+          aria-label={startSession.isPending ? "Starting session" : "Start playing video games"}
           className={cn(
             "w-48 h-48 rounded-full text-2xl font-bold transition-all",
             "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -283,7 +284,7 @@ function Play() {
             isOverLimit && "bg-exceeded hover:bg-exceeded/90"
           )}
         >
-          {startSession.isPending ? "Starting..." : "Start Playing"}
+          {startSession.isPending ? "Starting…" : "Start Playing"}
         </button>
 
         {/* Over limit warning */}
@@ -352,6 +353,9 @@ function Play() {
               {editingStartTime ? (
                 <input
                   type="time"
+                  name="start-time"
+                  autoComplete="off"
+                  aria-label="Session start time"
                   className="text-lg font-medium bg-transparent border-b border-primary focus:outline-none"
                   defaultValue={toTimeInputValue(activeSession.startTime)}
                   min={getStartTimeMin()}
@@ -394,6 +398,7 @@ function Play() {
         <button
           onClick={() => stopSession.mutate({ sessionId: activeSession.id })}
           disabled={stopSession.isPending}
+          aria-label={stopSession.isPending ? "Stopping session" : "Stop playing video games"}
           className={cn(
             "w-40 h-40 rounded-full text-xl font-bold transition-all",
             "bg-card border-4",
@@ -404,7 +409,7 @@ function Play() {
             "disabled:opacity-50"
           )}
         >
-          {stopSession.isPending ? "Stopping..." : "Stop Playing"}
+          {stopSession.isPending ? "Stopping…" : "Stop Playing"}
         </button>
 
         {/* Progress bar */}
@@ -462,6 +467,9 @@ function Play() {
               {editingEndTime ? (
                 <input
                   type="time"
+                  name="end-time"
+                  autoComplete="off"
+                  aria-label="Session end time"
                   className="text-lg font-medium bg-transparent border-b border-primary focus:outline-none"
                   defaultValue={toTimeInputValue(stoppedSession.endTime)}
                   min={getEndTimeMin()}
